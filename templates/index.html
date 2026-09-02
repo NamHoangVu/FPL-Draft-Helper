@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>FPL Draft Helper</title>
+<style>
+    :root {
+        --bg: #0f1420;
+        --card: #171d2b;
+        --border: #2a3245;
+        --text: #e7ebf3;
+        --muted: #9aa4b8;
+        --green: #2fbf71;
+        --yellow: #e0b23c;
+        --red: #e0563c;
+        --blue: #4c8bf5;
+    }
+    * { box-sizing: border-box; }
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 32px;
+    }
+    h1 { margin: 0 0 4px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; }
+    h2 {
+        margin: 40px 0 16px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 8px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    th, td {
+        text-align: left;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+    }
+    th {
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 12px;
+    }
+    tr:last-child td { border-bottom: none; }
+    .pos-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        background: #232b3d;
+        color: var(--muted);
+    }
+    .fdr-1, .fdr-2 { color: var(--green); }
+    .fdr-3 { color: var(--yellow); }
+    .fdr-4, .fdr-5 { color: var(--red); }
+    .score-high { color: var(--green); font-weight: 600; }
+    .score-mid { color: var(--yellow); font-weight: 600; }
+    .score-low { color: var(--red); font-weight: 600; }
+    .note { color: var(--muted); font-size: 13px; }
+    .error {
+        background: #3a1f24;
+        border: 1px solid var(--red);
+        color: #ffb4a8;
+        padding: 16px;
+        border-radius: 8px;
+    }
+    .league-card {
+        background: var(--card);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        border: 1px solid var(--border);
+    }
+    .league-card .team-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+    }
+    .league-card .team-header .rank {
+        color: var(--blue);
+        font-weight: 700;
+        margin-right: 8px;
+    }
+    .squad-list {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    .points {
+        color: var(--text);
+        font-weight: 600;
+    }
+</style>
+</head>
+<body>
+    <h1>🏆 FPL Draft Helper</h1>
+
+    {% if error %}
+        <div class="error"><strong>Feil:</strong> {{ error }}</div>
+    {% else %}
+        <div class="subtitle">
+            {{ team_name }} · Siste GW: {{ current_gw }} · Neste GW: {{ next_gw }}
+        </div>
+
+        <h2>📋 Anbefalt startlag – GW{{ next_gw }}</h2>
+        <table>
+            <tr>
+                <th>Pos</th><th>Spiller</th><th>Lag</th><th>Form</th>
+                <th>Siste GW</th><th>Neste kamp</th><th>Score</th><th>Notat</th>
+            </tr>
+            {% for p in starters %}
+            <tr>
+                <td><span class="pos-badge">{{ p.position }}</span></td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.team }}</td>
+                <td>{{ p.form }}</td>
+                <td>{{ p.points_last_gw }}</td>
+                <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
+                <td class="{{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}">
+                    {{ p.recommendation_score }}
+                </td>
+                <td class="note">{{ p.recommendation_note }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <h2>🪑 Benk</h2>
+        <table>
+            <tr><th>Pos</th><th>Spiller</th><th>Lag</th><th>Neste kamp</th><th>Notat</th></tr>
+            {% for p in bench %}
+            <tr>
+                <td><span class="pos-badge">{{ p.position }}</span></td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.team }}</td>
+                <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
+                <td class="note">{{ p.recommendation_note }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        {% if waiver_targets %}
+        <h2>🔄 Waiver/Free Agent-anbefalinger</h2>
+        <table>
+            <tr>
+                <th>#</th><th>Pos</th><th>Spiller</th><th>Lag</th><th>Form</th>
+                <th>Total pts</th><th>Neste kamp</th><th>Score</th><th>Notat</th>
+            </tr>
+            {% for p in waiver_targets %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><span class="pos-badge">{{ p.position }}</span></td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.team }}</td>
+                <td>{{ p.form }}</td>
+                <td>{{ p.total_points }}</td>
+                <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
+                <td class="{{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}">
+                    {{ p.recommendation_score }}
+                </td>
+                <td class="note">{{ p.recommendation_note }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if waiver_timing and waiver_timing.my_waiver_pick %}
+        <h2>⏱️ Waiver-timing</h2>
+        <p class="subtitle">
+            Din waiver-prioritet denne runden: <strong>#{{ waiver_timing.my_waiver_pick }} av {{ waiver_timing.total_entries }}</strong>
+        </p>
+        <table>
+            <tr><th>Spiller</th><th>Pos</th><th>Score</th><th>Risiko for å bli tatt før din tur</th></tr>
+            {% for t in waiver_timing.targets %}
+            <tr>
+                <td>{{ t.player.name }}</td>
+                <td><span class="pos-badge">{{ t.player.position }}</span></td>
+                <td>{{ t.player.recommendation_score }}</td>
+                <td class="{{ 'score-low' if t.threatened_by else 'note' }}">
+                    {{ t.threatened_by | join(', ') if t.threatened_by else 'Lav risiko' }}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if transfer_suggestions %}
+        <h2>🔁 Anbefalte bytter</h2>
+        <table>
+            <tr><th>Pos</th><th>Bytt ut</th><th>Hent inn</th><th>Gevinst</th></tr>
+            {% for s in transfer_suggestions %}
+            <tr>
+                <td><span class="pos-badge">{{ s.position }}</span></td>
+                <td>{{ s.drop.name }} ({{ s.drop.team }}) <span class="note">score {{ s.drop.recommendation_score }}</span></td>
+                <td>{{ s.add.name }} ({{ s.add.team }}) <span class="note">score {{ s.add.recommendation_score }}</span></td>
+                <td class="score-high">+{{ s.score_gain }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if league_overview %}
+        <h2>🏆 Ligaoversikt</h2>
+        {% for entry in league_overview %}
+        <div class="league-card">
+            <div class="team-header">
+                <div><span class="rank">#{{ entry.rank }}</span>{{ entry.team_name }} <span class="note">({{ entry.manager }})</span></div>
+                <div class="points">{{ entry.total_points }} p <span class="note">(GW: {{ entry.event_points }})</span></div>
+            </div>
+            <div class="squad-list">
+                {% for player in entry.squad %}{{ player.position }} {{ player.name }}{% if not loop.last %} · {% endif %}{% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if trade_opportunities %}
+        <h2>🔄 Trade-muligheter</h2>
+        <table>
+            <tr><th>Manager</th><th>Du gir</th><th>Du får</th><th>Gevinst</th></tr>
+            {% for o in trade_opportunities %}
+            <tr>
+                <td>{{ o.other_manager }}</td>
+                <td>{% for p in o.give %}{{ p.position }} {{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+                <td>{% for p in o.receive %}{{ p.position }} {{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+                <td class="score-high">+{{ o.my_gain }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <p class="note">NB: forslag til deg – den andre manageren må også vurdere det verdt det.</p>
+        {% endif %}
+
+        {% if transactions_feed %}
+        <h2>📜 Waiver/transfer-historikk i ligaen</h2>
+        <table>
+            <tr><th>Dato</th><th>Lag</th><th>Type</th><th>Inn</th><th>Ut</th><th>Resultat</th></tr>
+            {% for tx in transactions_feed %}
+            <tr>
+                <td>{{ tx.added[:10] }}</td>
+                <td>{{ tx.team_name }}</td>
+                <td>{{ tx.kind }}</td>
+                <td>{{ tx.player_in }}</td>
+                <td>{{ tx.player_out }}</td>
+                <td class="{{ 'score-high' if tx.result == 'Godkjent' else 'score-low' }}">{{ tx.result }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if trades_feed %}
+        <h2>🤝 Foreslåtte trades mellom managere</h2>
+        <table>
+            <tr><th>Fra</th><th>Til</th><th>Gir</th><th>Får</th><th>Status</th></tr>
+            {% for t in trades_feed %}
+            <tr>
+                <td>{{ t.proposer }}</td>
+                <td>{{ t.counterpart }}</td>
+                <td>{{ t.gives }}</td>
+                <td>{{ t.receives }}</td>
+                <td>{{ t.state }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

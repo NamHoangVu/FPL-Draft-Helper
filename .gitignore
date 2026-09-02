@@ -1,0 +1,13 @@
+# Miljøvariabler / secrets
+.env
+
+# Claude Code lokale innstillinger
+.claude/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Editor/OS
+.DS_Store
