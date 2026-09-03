@@ -1,6 +1,6 @@
 """
 FPL Draft Analyzer
-Analyserer laget ditt og gir anbefalinger for neste gameweek.
+Analyzes your squad and gives recommendations for the next gameweek.
 """
 
 import json
@@ -9,22 +9,22 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-# Fanger opp FPL sin nyhetstekst for spillere som har forlatt klubben,
-# f.eks. "Has joined Al Hilal permanently" eller "Has joined Como on loan..."
+# Catches FPL's news text for players who have left the club,
+# e.g. "Has joined Al Hilal permanently" or "Has joined Como on loan..."
 NEW_CLUB_PATTERN = re.compile(r"[Jj]oined\s+(.+?)(?:\s+on loan|\s+permanently|\s*$)")
 
 
 def extract_new_club(news: str) -> Optional[str]:
-    """Finner navnet på ny klubb fra FPL sin news-tekst, hvis spilleren har forlatt klubben."""
+    """Finds the new club name from FPL's news text, if the player has left the club."""
     if not news:
         return None
     match = NEW_CLUB_PATTERN.search(news)
     return match.group(1) if match else None
 
 
-# Fixture Difficulty Rating: 1 = enklest, 5 = hardest
-# Brukes til å score fixtures for neste gameweek
-FDR_LABELS = {1: "Veldig lett ✅", 2: "Lett ✅", 3: "Middels ⚠️", 4: "Vanskelig ❌", 5: "Veldig vanskelig ❌"}
+# Fixture Difficulty Rating: 1 = easiest, 5 = hardest
+# Used to score fixtures for the next gameweek
+FDR_LABELS = {1: "Very easy ✅", 2: "Easy ✅", 3: "Medium ⚠️", 4: "Hard ❌", 5: "Very hard ❌"}
 
 
 @dataclass
@@ -34,15 +34,15 @@ class PlayerAnalysis:
     team: str
     position: str          # GKP, DEF, MID, FWD
     is_starter: bool
-    bench_position: Optional[int]  # None hvis starter
+    bench_position: Optional[int]  # None if starter
 
-    # Form og poeng
+    # Form and points
     total_points: int
-    form: float            # snitt siste 5 kamper
+    form: float            # average over the last 5 matches
     points_last_gw: int
     minutes_last_gw: int
 
-    # Neste kamp
+    # Next match
     next_opponent: str
     next_fixture_fdr: int  # 1-5
     next_is_home: bool
@@ -50,15 +50,15 @@ class PlayerAnalysis:
     # Status
     status: str            # 'a' = available, 'd' = doubt, 'u' = unavailable
     chance_of_playing: Optional[int]  # 0-100
-    news: str = ""         # FPL sin nyhetstekst, f.eks. skade eller klubbovergang
+    news: str = ""         # FPL's news text, e.g. injury or club transfer
 
-    # Score beregnet av analyzer
+    # Score calculated by the analyzer
     recommendation_score: float = 0.0
     recommendation_note: str = ""
 
     @property
     def fixture_label(self) -> str:
-        home_away = "H" if self.next_is_home else "B"
+        home_away = "H" if self.next_is_home else "A"
         return f"{self.next_opponent} ({home_away}) FDR:{self.next_fixture_fdr}"
 
     @property
@@ -73,11 +73,11 @@ class PlayerAnalysis:
 
 def build_current_squad_picks(league_element_status: dict, entry_id: int) -> dict:
     """
-    Bygger et picks-objekt (samme form som get_my_picks()) fra league/element-status.
+    Builds a picks object (same shape as get_my_picks()) from league/element-status.
 
-    get_my_picks() henter en gameweeks *låste* oppstilling, som ikke finnes før den
-    gameweeken har startet – element-status viser derimot eierskap i realtid, så
-    dette fanger opp transfers/waivers du har gjort etter siste låste gameweek.
+    get_my_picks() fetches a gameweek's *locked* lineup, which doesn't exist until that
+    gameweek has started – element-status instead shows ownership in real time, so this
+    picks up transfers/waivers you've made since the last locked gameweek.
     """
     picks = [
         {"element": status["element"], "position": i}
@@ -90,22 +90,22 @@ def build_current_squad_picks(league_element_status: dict, entry_id: int) -> dic
 
 
 def build_player_lookup(bootstrap: dict) -> dict:
-    """Bygger en dict med player_id -> player-data fra bootstrap."""
+    """Builds a dict of player_id -> player data from bootstrap."""
     return {p["id"]: p for p in bootstrap["elements"]}
 
 
 def build_team_lookup(bootstrap: dict) -> dict:
-    """Bygger en dict med team_id -> team-data."""
+    """Builds a dict of team_id -> team data."""
     return {t["id"]: t for t in bootstrap["teams"]}
 
 
 def get_next_fixtures(fixtures: list, gameweek: int) -> dict:
     """
-    Returnerer en dict: team_id -> list av (opponent_team_id, is_home, fdr)
-    for den gitte gameweeken.
+    Returns a dict: team_id -> list of (opponent_team_id, is_home, fdr)
+    for the given gameweek.
 
-    fixtures: liste med fixtures (inkl. FDR) for denne gameweeken,
-    fra FPLDraftClient.get_fixtures_for_gameweek().
+    fixtures: list of fixtures (incl. FDR) for this gameweek,
+    from FPLDraftClient.get_fixtures_for_gameweek().
     """
     fixtures_by_team: dict = {}
     for fixture in fixtures:
@@ -124,22 +124,22 @@ def get_next_fixtures(fixtures: list, gameweek: int) -> dict:
 
 def calculate_recommendation_score(player: PlayerAnalysis) -> float:
     """
-    Enkel scoringsmodell:
-    - Form (siste 5 GW snitt) vektes høyest
-    - Fixture difficulty trekker fra
-    - Minutter siste kamp indikerer om spilleren faktisk spiller
-    - Status-straff for skadde/usikre spillere
+    Simple scoring model:
+    - Form (average of the last 5 GWs) is weighted highest
+    - Fixture difficulty is subtracted
+    - Minutes in the last match indicate whether the player actually plays
+    - Status penalty for injured/doubtful players
     """
     score = 0.0
 
-    # Form: 0-10 poeng → vekt 40%
+    # Form: 0-10 points -> weight 40%
     score += min(player.form, 15.0) * 2.0
 
-    # FDR: 1=bra, 5=dårlig → inverter
+    # FDR: 1=good, 5=bad -> invert
     fdr_bonus = (6 - player.next_fixture_fdr) * 3.0  # 15 for FDR=1, 3 for FDR=5
     score += fdr_bonus
 
-    # Minutter siste kamp: belønner spillere som faktisk starter
+    # Minutes in the last match: rewards players who actually start
     if player.minutes_last_gw >= 60:
         score += 5.0
     elif player.minutes_last_gw >= 30:
@@ -147,10 +147,10 @@ def calculate_recommendation_score(player: PlayerAnalysis) -> float:
     elif player.minutes_last_gw == 0:
         score -= 5.0
 
-    # Poeng siste GW (momentum)
+    # Points in the last GW (momentum)
     score += min(player.points_last_gw, 20) * 0.3
 
-    # Straff for skade/usikkerhet
+    # Penalty for injury/doubt
     if player.status == "u":
         score -= 20.0
     elif player.status == "d":
@@ -166,29 +166,29 @@ def generate_recommendation_note(player: PlayerAnalysis) -> str:
     if player.status == "u":
         new_club = extract_new_club(player.news)
         if new_club:
-            notes.append(f"❌ Ikke lenger i Premier League (har gått til {new_club})")
+            notes.append(f"❌ No longer in the Premier League (moved to {new_club})")
         else:
-            notes.append("❌ Ikke spilleklar")
+            notes.append("❌ Not available")
         return " | ".join(notes)
     if player.status == "d":
-        notes.append(f"⚠️ Usikker ({player.chance_of_playing}%)")
+        notes.append(f"⚠️ Doubtful ({player.chance_of_playing}%)")
 
     if player.next_fixture_fdr <= 2:
-        notes.append("✅ Knallbra fixture")
+        notes.append("✅ Great fixture")
     elif player.next_fixture_fdr == 3:
-        notes.append("⚠️ Middels fixture")
+        notes.append("⚠️ Medium fixture")
     else:
-        notes.append("❌ Tøff fixture")
+        notes.append("❌ Tough fixture")
 
     if player.form >= 8:
-        notes.append("🔥 I toppform")
+        notes.append("🔥 In top form")
     elif player.form >= 5:
         notes.append("📈 OK form")
     elif player.form < 3:
-        notes.append("📉 Dårlig form")
+        notes.append("📉 Poor form")
 
     if player.minutes_last_gw == 0:
-        notes.append("⚠️ Spilte ikke siste GW")
+        notes.append("⚠️ Didn't play last GW")
 
     return " | ".join(notes)
 
@@ -201,19 +201,19 @@ def analyze_squad(
     fixtures: list,
 ) -> list[PlayerAnalysis]:
     """
-    Analyserer alle 15 spillere i laget ditt.
+    Analyzes all 15 players in your squad.
 
-    picks: fra get_my_picks()
-    bootstrap: fra get_bootstrap()
-    next_gw: neste gameweek-nummer
-    player_histories: dict med player_id -> get_player_history()
-    fixtures: fra get_fixtures_for_gameweek(next_gw), inkl. FDR
+    picks: from get_my_picks()
+    bootstrap: from get_bootstrap()
+    next_gw: next gameweek number
+    player_histories: dict of player_id -> get_player_history()
+    fixtures: from get_fixtures_for_gameweek(next_gw), incl. FDR
     """
     player_lookup = build_player_lookup(bootstrap)
     team_lookup = build_team_lookup(bootstrap)
     next_fixtures = get_next_fixtures(fixtures, next_gw)
 
-    # FPL posisjonskoder: 1=GKP, 2=DEF, 3=MID, 4=FWD
+    # FPL position codes: 1=GKP, 2=DEF, 3=MID, 4=FWD
     pos_map = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
 
     results = []
@@ -226,7 +226,7 @@ def analyze_squad(
         team_id = p["team"]
         team_name = team_lookup.get(team_id, {}).get("short_name", "?")
 
-        # Neste fixture
+        # Next fixture
         team_fixtures = next_fixtures.get(team_id, [])
         if team_fixtures:
             opp_id, is_home, fdr = team_fixtures[0]
@@ -234,7 +234,7 @@ def analyze_squad(
         else:
             opp_name, is_home, fdr = "Blank", False, 3
 
-        # Historikk: hent form og siste kamp
+        # History: get form and last match
         history = player_histories.get(pid, {})
         past_matches = history.get("history", [])
 
@@ -245,7 +245,7 @@ def analyze_squad(
             points_last_gw = last.get("total_points", 0)
             minutes_last_gw = last.get("minutes", 0)
 
-        # Form: snitt siste 5 kamper (FPL gir dette direkte)
+        # Form: average of the last 5 matches (FPL provides this directly)
         try:
             form = float(p.get("form", 0))
         except (ValueError, TypeError):
@@ -279,16 +279,16 @@ def analyze_squad(
 
 def recommend_starting_xi(players: list[PlayerAnalysis]) -> tuple[list, list]:
     """
-    Anbefaler en startoppstilling basert på scores,
-    med respekt for posisjonskrav (1 GKP, min 3 DEF, min 2 FWD, max 5 DEF/MID/FWD).
+    Recommends a starting lineup based on scores,
+    respecting position requirements (1 GKP, min 3 DEF, min 2 FWD, max 5 DEF/MID/FWD).
 
-    Returnerer (startere, benk) sortert etter score.
+    Returns (starters, bench) sorted by score.
     """
-    # Skill ut skadet/utilgjengelig
+    # Separate out injured/unavailable
     available = [p for p in players if p.status != "u"]
     unavailable = [p for p in players if p.status == "u"]
 
-    # Sorter etter score
+    # Sort by score
     by_pos: dict[str, list] = {"GKP": [], "DEF": [], "MID": [], "FWD": []}
     for p in sorted(available, key=lambda x: x.recommendation_score, reverse=True):
         by_pos[p.position].append(p)
@@ -301,15 +301,15 @@ def recommend_starting_xi(players: list[PlayerAnalysis]) -> tuple[list, list]:
         starters.append(by_pos["GKP"][0])
         bench.extend(by_pos["GKP"][1:])
 
-    # Minst 3 forsvarere
+    # At least 3 defenders
     starters.extend(by_pos["DEF"][:3])
     remaining_def = by_pos["DEF"][3:]
 
-    # Minst 2 angripere
+    # At least 2 forwards
     starters.extend(by_pos["FWD"][:2])
     remaining_fwd = by_pos["FWD"][2:]
 
-    # Fyll ut de resterende 5 feltspillerne med beste tilgjengelige
+    # Fill the remaining 5 outfield slots with the best available
     remaining_slots = 11 - len(starters)
     extras = sorted(
         remaining_def + by_pos["MID"] + remaining_fwd,
@@ -330,8 +330,8 @@ def analyze_free_agents(
     fixtures: list,
 ) -> list[PlayerAnalysis]:
     """
-    Analyserer alle ledige spillere (ikke draftet av noen) i ligaen,
-    sortert etter score (best først).
+    Analyzes all free agents (not drafted by anyone) in the league,
+    sorted by score (best first).
     """
     player_lookup = build_player_lookup(bootstrap)
     team_lookup = build_team_lookup(bootstrap)
@@ -340,7 +340,7 @@ def analyze_free_agents(
 
     free_agents = []
     for status in league_element_status.get("element_status", []):
-        # owner_entry = None betyr at spilleren ikke er draftet
+        # owner_entry = None means the player hasn't been drafted
         if status.get("owner") is not None:
             continue
 
@@ -396,8 +396,8 @@ def analyze_all_owned_players(
     fixtures: list,
 ) -> dict:
     """
-    Analyserer alle draftede spillere i ligaen, gruppert på hvilken manager
-    (entry_id) som eier dem. Brukes til trade-finner og waiver-timing.
+    Analyzes all drafted players in the league, grouped by which manager
+    (entry_id) owns them. Used for the trade finder and waiver timing.
     """
     player_lookup = build_player_lookup(bootstrap)
     team_lookup = build_team_lookup(bootstrap)
@@ -462,7 +462,7 @@ def find_waiver_targets(
     fixtures: list,
     top_n: int = 10,
 ) -> list[PlayerAnalysis]:
-    """Topp N ledige spillere totalt, til visning."""
+    """Top N free agents overall, for display."""
     return analyze_free_agents(league_element_status, bootstrap, next_gw, fixtures)[:top_n]
 
 
@@ -473,9 +473,9 @@ def suggest_transfers(
     max_suggestions: int = 5,
 ) -> list[dict]:
     """
-    Foreslår bytter: for hver posisjon, sammenlign din svakeste spiller
-    med den beste tilgjengelige ledige spilleren i samme posisjon.
-    Foreslår kun bytte hvis forbedringen i score er minst min_score_gain.
+    Suggests transfers: for each position, compares your weakest player
+    with the best available free agent in the same position.
+    Only suggests a transfer if the score improvement is at least min_score_gain.
     """
     own_by_position: dict = {}
     for p in players:
@@ -510,18 +510,18 @@ def suggest_transfers(
 
 def build_league_overview(league_details: dict, league_element_status: dict, bootstrap: dict) -> list[dict]:
     """
-    Bygger en oversikt over alle managere i ligaen: standings og hvilke
-    spillere de eier, basert på league/details og league/element-status.
+    Builds an overview of all managers in the league: standings and which
+    players they own, based on league/details and league/element-status.
     """
     player_lookup = build_player_lookup(bootstrap)
     pos_map = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
 
-    # standings.league_entry peker til league_entries.id, mens
-    # element_status.owner peker til league_entries.entry_id. Bygg begge lookups.
+    # standings.league_entry points to league_entries.id, while
+    # element_status.owner points to league_entries.entry_id. Build both lookups.
     entries_by_id = {e["id"]: e for e in league_details.get("league_entries", [])}
     entry_id_to_league_entry_id = {e["entry_id"]: e["id"] for e in league_details.get("league_entries", [])}
 
-    squads: dict = {}  # league_entry_id -> list av spillere
+    squads: dict = {}  # league_entry_id -> list of players
     for status in league_element_status.get("element_status", []):
         owner_entry_id = status.get("owner")
         if owner_entry_id is None:
@@ -553,16 +553,41 @@ def build_league_overview(league_details: dict, league_element_status: dict, boo
     return overview
 
 
+def build_league_squads(league_details: dict, owned_by_entry: dict) -> list[dict]:
+    """
+    Like build_league_overview, but returns the recommended starting lineup (PlayerAnalysis
+    objects from analyze_all_owned_players) for each manager, so their team can be shown
+    as a formation the same way as your own.
+    """
+    entries_by_id = {e["id"]: e for e in league_details.get("league_entries", [])}
+
+    overview = []
+    for standing in sorted(league_details.get("standings", []), key=lambda s: s["rank"]):
+        entry = entries_by_id.get(standing["league_entry"], {})
+        entry_players = owned_by_entry.get(entry.get("entry_id"), [])
+        starters, _ = recommend_starting_xi(entry_players) if entry_players else ([], [])
+        overview.append({
+            "rank": standing["rank"],
+            "team_name": entry.get("entry_name", "?"),
+            "manager": f"{entry.get('player_first_name', '')} {entry.get('player_last_name', '')}".strip(),
+            "total_points": standing["total"],
+            "event_points": standing["event_total"],
+            "starters": starters,
+        })
+
+    return overview
+
+
 def build_transactions_feed(transactions: dict, league_details: dict, bootstrap: dict) -> list[dict]:
     """
-    Bygger en lesbar liste over waiver/transfer-forespørsler fra alle
-    managere i ligaen, nyest først.
+    Builds a readable list of waiver/transfer requests from all
+    managers in the league, newest first.
     """
     player_lookup = build_player_lookup(bootstrap)
     entries_by_entry_id = {e["entry_id"]: e for e in league_details.get("league_entries", [])}
 
     kind_labels = {"w": "Waiver", "f": "Free agent", "t": "Trade"}
-    result_labels = {"a": "Godkjent"}
+    result_labels = {"a": "Approved"}
 
     def player_name(pid):
         p = player_lookup.get(pid)
@@ -579,7 +604,7 @@ def build_transactions_feed(transactions: dict, league_details: dict, bootstrap:
             "kind": kind_labels.get(tx.get("kind"), tx.get("kind")),
             "player_in": player_name(tx.get("element_in")),
             "player_out": player_name(tx.get("element_out")),
-            "result": result_labels.get(tx.get("result"), "Avvist/ikke gjennomført"),
+            "result": result_labels.get(tx.get("result"), "Rejected/not completed"),
         })
 
     return sorted(feed, key=lambda t: t["added"], reverse=True)
@@ -587,29 +612,29 @@ def build_transactions_feed(transactions: dict, league_details: dict, bootstrap:
 
 def build_trades_feed(trades: dict, league_details: dict, bootstrap: dict) -> list[dict]:
     """
-    Bygger en lesbar liste over foreslåtte/pågående trades mellom managere
-    (før de er godkjent/avvist), inkludert hvem som trader med hvem.
+    Builds a readable list of proposed/pending trades between managers
+    (before they're accepted/rejected), including who's trading with whom.
 
-    NB: FPL Draft sitt /trades-endepunkt har uklar/udokumentert feltnavngiving
-    (siden ingen trades er foreslått i ligaen ennå, kunne vi ikke verifisere
-    de eksakte feltnavnene mot ekte data). Koden er skrevet defensivt med
-    .get()-fallbacks, men feltnavnene kan trenge justering når en faktisk
-    trade dukker opp.
+    NOTE: FPL Draft's /trades endpoint has unclear/undocumented field naming
+    (since no trades had been proposed in the league yet, we couldn't verify
+    the exact field names against real data). The code is written defensively
+    with .get() fallbacks, but the field names may need adjusting once an
+    actual trade shows up.
     """
     player_lookup = build_player_lookup(bootstrap)
     entries_by_entry_id = {e["entry_id"]: e for e in league_details.get("league_entries", [])}
 
     state_labels = {
-        "p": "Foreslått",
-        "proposed": "Foreslått",
-        "a": "Akseptert",
-        "accepted": "Akseptert",
-        "d": "Avvist",
-        "rejected": "Avvist",
-        "withdrawn": "Trukket tilbake",
-        "expired": "Utløpt",
-        "invalid": "Ugyldig",
-        "vetoed": "Nedstemt",
+        "p": "Proposed",
+        "proposed": "Proposed",
+        "a": "Accepted",
+        "accepted": "Accepted",
+        "d": "Rejected",
+        "rejected": "Rejected",
+        "withdrawn": "Withdrawn",
+        "expired": "Expired",
+        "invalid": "Invalid",
+        "vetoed": "Vetoed",
     }
 
     def entry_label(entry_id):
@@ -639,7 +664,7 @@ def build_trades_feed(trades: dict, league_details: dict, bootstrap: dict) -> li
             "counterpart": entry_label(counterpart_id),
             "gives": ", ".join(player_names(offer_out)) or "?",
             "receives": ", ".join(player_names(offer_in)) or "?",
-            "state": state_labels.get(state, state or "Ukjent"),
+            "state": state_labels.get(state, state or "Unknown"),
         })
 
     return feed
@@ -666,15 +691,15 @@ def find_trade_opportunities(
     max_suggestions: int = 5,
 ) -> list[dict]:
     """
-    Finner gjensidig gunstige 2-for-2 trades: du gir din spareste spiller i en
-    posisjon du er sterk i, pluss din svakeste spiller i en posisjon du
-    trenger hjelp i. I retur får du deres svakeste spiller i posisjonen du er
-    sterk i (billig for dem å gi bort), pluss deres nest beste spiller i
-    posisjonen de er sterke i (overskudd for dem, de holder på sin beste).
+    Finds mutually beneficial 2-for-2 trades: you give your most spare player in a
+    position you're strong in, plus your weakest player in a position you need
+    help in. In return you get their weakest player in the position you're
+    strong in (cheap for them to give up), plus their second-best player in
+    the position they're strong in (a surplus for them, since they keep their best).
 
-    Dette bevarer antall spillere per posisjon på begge lag (som FPL Draft
-    krever for gyldige trades), og gir netto forbedring for deg – men husk at
-    den andre manageren må vurdere det som verdt det for seg også.
+    This preserves the number of players per position on both teams (as FPL Draft
+    requires for valid trades), and gives a net improvement for you – but remember
+    the other manager also has to consider it worth it for them.
     """
     entries_by_entry_id = {e["entry_id"]: e for e in league_details.get("league_entries", [])}
     positions = ["GKP", "DEF", "MID", "FWD"]
@@ -701,8 +726,8 @@ def find_trade_opportunities(
             for p2 in positions:
                 if p1 == p2:
                     continue
-                # Jeg er sterkere i p1 (kan spare en spiller der),
-                # de er sterkere i p2 (jeg trenger hjelp der).
+                # I'm stronger in p1 (can spare a player there),
+                # they're stronger in p2 (I need help there).
                 my_edge_p1 = my_avg[p1] - other_avg[p1]
                 their_edge_p2 = other_avg[p2] - my_avg[p2]
                 if my_edge_p1 < min_gain / 2 or their_edge_p2 < min_gain / 2:
@@ -747,13 +772,13 @@ def build_waiver_timing_report(
     top_n: int = 8,
 ) -> dict:
     """
-    Viser waiver-prioriteten din denne runden, og flagger hvilke av de beste
-    ledige spillerne som står i fare for å bli tatt av managere med bedre
-    prioritet enn deg (basert på om de har en merkbart svak posisjon der).
+    Shows your waiver priority this round, and flags which of the best free
+    agents are at risk of being taken by managers with better priority than
+    you (based on whether they have a noticeably weak spot in that position).
 
-    Vi har ikke tilgang til faktiske innsendte waiver-krav fra andre
-    managere (det er ikke eksponert i API'et), så dette er en heuristikk
-    basert på hvem som trenger hjelp i posisjonen, ikke en garanti.
+    We don't have access to actual submitted waiver claims from other
+    managers (it's not exposed in the API), so this is a heuristic based on
+    who needs help at that position, not a guarantee.
     """
     positions = ["GKP", "DEF", "MID", "FWD"]
     entries = league_details.get("league_entries", [])
@@ -804,17 +829,17 @@ def apply_club_change_notes(
     cache_path: str = CLUB_CHANGE_CACHE_FILE,
 ) -> None:
     """
-    FPL sitt API viser bare nåværende klubb, ikke historikk. Denne funksjonen
-    lagrer hvilken klubb hver spiller hadde forrige gang verktøyet kjørte, og
-    flagger et bytte hvis klubben er annerledes nå – selv bytter *innad* i
-    Premier League (som ikke fanges opp av status/news-feltet).
+    FPL's API only shows the current club, not history. This function stores
+    which club each player had the last time the tool ran, and flags a change
+    if the club is different now – even transfers *within* the Premier League
+    (which aren't caught by the status/news field).
 
-    Flagget ligger på notatet i hele gameweeken byttet ble oppdaget i (uansett
-    hvor mange ganger du kjører verktøyet), og forsvinner automatisk når
-    neste gameweek starter (current_gw øker).
+    The flag stays on the note for the entire gameweek the change was detected
+    in (no matter how many times you run the tool), and disappears automatically
+    once the next gameweek starts (current_gw increases).
 
-    Oppdaterer player.recommendation_note direkte (i minnet), og skriver
-    oppdatert cache til disk etterpå.
+    Updates player.recommendation_note directly (in memory), and writes the
+    updated cache to disk afterwards.
     """
     try:
         with open(cache_path) as f:
@@ -825,16 +850,16 @@ def apply_club_change_notes(
     for player in players:
         key = str(player.id)
         entry = cache.get(key, {"team": None, "prev_team": None, "flag_gw": None})
-        if isinstance(entry, str):  # migrering fra eldre cache-format
+        if isinstance(entry, str):  # migration from an older cache format
             entry = {"team": entry, "prev_team": None, "flag_gw": None}
 
         old_team = entry.get("team")
         if old_team and old_team != player.team:
-            # Nytt bytte oppdaget nå – start flagget for denne gameweeken
+            # New change detected now – start the flag for this gameweek
             entry["prev_team"] = old_team
             entry["flag_gw"] = current_gw
         elif entry.get("flag_gw") is not None and entry.get("flag_gw") != current_gw:
-            # Neste gameweek har startet – fjern flagget
+            # The next gameweek has started – clear the flag
             entry["flag_gw"] = None
             entry["prev_team"] = None
 
@@ -842,7 +867,7 @@ def apply_club_change_notes(
 
         if entry.get("flag_gw") == current_gw and entry.get("prev_team"):
             player.recommendation_note = (
-                f"🔁 Byttet klubb (fra {entry['prev_team']} til {player.team}) | {player.recommendation_note}"
+                f"🔁 Changed club (from {entry['prev_team']} to {player.team}) | {player.recommendation_note}"
             )
 
         cache[key] = entry

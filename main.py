@@ -1,6 +1,6 @@
 """
-FPL Draft Helper – hovedprogram
-Kjør: python main.py
+FPL Draft Helper - main program
+Run: python main.py
 """
 
 import os
@@ -37,15 +37,15 @@ def get_cookie_header() -> str:
     if not cookie:
         console.print(
             Panel(
-                "[bold red]Mangler PL_COOKIE_HEADER![/]\n\n"
-                "Slik henter du den (fungerer også for Google-innlogging):\n"
-                "1. Logg inn på [link=https://draft.premierleague.com]draft.premierleague.com[/link]\n"
-                "2. Åpne DevTools (F12) → fanen Network\n"
-                "3. Last siden på nytt, finn en forespørsel til [bold]api/game[/bold] eller [bold]api/element-status[/bold]\n"
-                "4. Under Request Headers, kopier hele verdien av [bold]Cookie[/bold]\n"
-                "5. Lim inn i [bold].env[/bold]-filen:\n\n"
-                "   [green]PL_COOKIE_HEADER=din_verdi_her[/]",
-                title="Oppsett kreves",
+                "[bold red]Missing PL_COOKIE_HEADER![/]\n\n"
+                "How to get it (also works for Google login):\n"
+                "1. Log in at [link=https://draft.premierleague.com]draft.premierleague.com[/link]\n"
+                "2. Open DevTools (F12) → the Network tab\n"
+                "3. Reload the page, find a request to [bold]api/game[/bold] or [bold]api/element-status[/bold]\n"
+                "4. Under Request Headers, copy the entire value of [bold]Cookie[/bold]\n"
+                "5. Paste it into the [bold].env[/bold] file:\n\n"
+                "   [green]PL_COOKIE_HEADER=your_value_here[/]",
+                title="Setup required",
                 border_style="red",
             )
         )
@@ -58,12 +58,12 @@ def get_entry_id() -> int:
     if not entry_id:
         console.print(
             Panel(
-                "[bold red]Mangler PL_ENTRY_ID![/]\n\n"
-                "Dette er lag-ID-en din, synlig i cookien som [bold]activeEntry[/bold], "
-                "eller i URL-en når du er på 'My Team'-siden.\n\n"
-                "Legg til i [bold].env[/bold]-filen:\n\n"
+                "[bold red]Missing PL_ENTRY_ID![/]\n\n"
+                "This is your team ID, visible in the cookie as [bold]activeEntry[/bold], "
+                "or in the URL when you're on the 'My Team' page.\n\n"
+                "Add it to the [bold].env[/bold] file:\n\n"
                 "   [green]PL_ENTRY_ID=123456[/]",
-                title="Oppsett kreves",
+                title="Setup required",
                 border_style="red",
             )
         )
@@ -73,19 +73,19 @@ def get_entry_id() -> int:
 
 def print_squad_table(starters, bench):
     table = Table(
-        title="📋 Anbefalt startlag",
+        title="📋 Recommended starting lineup",
         box=box.ROUNDED,
         show_lines=True,
         header_style="bold cyan",
     )
     table.add_column("Pos", style="dim", width=5)
-    table.add_column("Spiller", min_width=22)
-    table.add_column("Lag", width=6)
+    table.add_column("Player", min_width=22)
+    table.add_column("Team", width=6)
     table.add_column("Form", justify="right", width=6)
-    table.add_column("Siste GW", justify="right", width=9)
-    table.add_column("Neste kamp", min_width=18)
+    table.add_column("Last GW", justify="right", width=9)
+    table.add_column("Next match", min_width=18)
     table.add_column("Score", justify="right", width=7)
-    table.add_column("Notat", min_width=28)
+    table.add_column("Note", min_width=28)
 
     for p in starters:
         name = p.name
@@ -105,13 +105,13 @@ def print_squad_table(starters, bench):
 
     console.print(table)
 
-    # Benk
-    bench_table = Table(title="🪑 Benk", box=box.SIMPLE, header_style="bold dim")
+    # Bench
+    bench_table = Table(title="🪑 Bench", box=box.SIMPLE, header_style="bold dim")
     bench_table.add_column("Pos", width=5)
-    bench_table.add_column("Spiller", min_width=22)
-    bench_table.add_column("Lag", width=6)
-    bench_table.add_column("Neste kamp", min_width=18)
-    bench_table.add_column("Notat", min_width=28)
+    bench_table.add_column("Player", min_width=22)
+    bench_table.add_column("Team", width=6)
+    bench_table.add_column("Next match", min_width=18)
+    bench_table.add_column("Note", min_width=28)
 
     for p in bench:
         fdr_color = ["", "green", "green", "yellow", "red", "red"][p.next_fixture_fdr]
@@ -127,23 +127,23 @@ def print_squad_table(starters, bench):
 
 def print_waiver_table(targets):
     if not targets:
-        console.print("[dim]Ingen ledige spillere funnet.[/]")
+        console.print("[dim]No free agents found.[/]")
         return
 
     table = Table(
-        title="🔄 Waiver/Free Agent anbefalinger",
+        title="🔄 Waiver/Free Agent recommendations",
         box=box.ROUNDED,
         header_style="bold magenta",
     )
     table.add_column("#", width=3)
     table.add_column("Pos", width=5)
-    table.add_column("Spiller", min_width=22)
-    table.add_column("Lag", width=6)
+    table.add_column("Player", min_width=22)
+    table.add_column("Team", width=6)
     table.add_column("Form", justify="right", width=6)
     table.add_column("Total pts", justify="right", width=9)
-    table.add_column("Neste kamp", min_width=18)
+    table.add_column("Next match", min_width=18)
     table.add_column("Score", justify="right", width=7)
-    table.add_column("Notat", min_width=25)
+    table.add_column("Note", min_width=25)
 
     for i, p in enumerate(targets, 1):
         fdr_color = ["", "green", "green", "yellow", "red", "red"][p.next_fixture_fdr]
@@ -164,18 +164,18 @@ def print_waiver_table(targets):
 
 def print_transfer_suggestions(suggestions):
     if not suggestions:
-        console.print("[dim]Ingen bytter anbefales – laget ditt ser bra ut i alle posisjoner.[/]")
+        console.print("[dim]No transfers recommended – your squad looks good in every position.[/]")
         return
 
     table = Table(
-        title="🔁 Anbefalte bytter",
+        title="🔁 Recommended transfers",
         box=box.ROUNDED,
         header_style="bold green",
     )
     table.add_column("Pos", width=5)
-    table.add_column("Bytt ut", min_width=22)
-    table.add_column("Hent inn", min_width=22)
-    table.add_column("Gevinst", justify="right", width=8)
+    table.add_column("Drop", min_width=22)
+    table.add_column("Add", min_width=22)
+    table.add_column("Gain", justify="right", width=8)
 
     for s in suggestions:
         table.add_row(
@@ -189,15 +189,15 @@ def print_transfer_suggestions(suggestions):
 
 def print_league_overview(overview):
     table = Table(
-        title="🏆 Ligaoversikt",
+        title="🏆 League overview",
         box=box.ROUNDED,
         header_style="bold blue",
     )
     table.add_column("#", width=3)
-    table.add_column("Lag", min_width=18)
+    table.add_column("Team", min_width=18)
     table.add_column("Manager", min_width=16)
-    table.add_column("Poeng", justify="right", width=7)
-    table.add_column("Siste GW", justify="right", width=9)
+    table.add_column("Points", justify="right", width=7)
+    table.add_column("Last GW", justify="right", width=9)
 
     for entry in overview:
         team_label = entry["team_name"]
@@ -218,23 +218,23 @@ def print_league_overview(overview):
 
 def print_transactions_feed(feed, limit=15):
     if not feed:
-        console.print("[dim]Ingen transaksjoner funnet i ligaen.[/]")
+        console.print("[dim]No transactions found in the league.[/]")
         return
 
     table = Table(
-        title="📜 Waiver/transfer-historikk i ligaen",
+        title="📜 Waiver/transfer history in the league",
         box=box.ROUNDED,
         header_style="bold yellow",
     )
-    table.add_column("Dato", width=12)
-    table.add_column("Lag", min_width=16)
+    table.add_column("Date", width=12)
+    table.add_column("Team", min_width=16)
     table.add_column("Type", width=11)
-    table.add_column("Inn", min_width=20)
-    table.add_column("Ut", min_width=20)
-    table.add_column("Resultat", width=22)
+    table.add_column("In", min_width=20)
+    table.add_column("Out", min_width=20)
+    table.add_column("Result", width=22)
 
     for tx in feed[:limit]:
-        result_color = "green" if tx["result"] == "Godkjent" else "red"
+        result_color = "green" if tx["result"] == "Approved" else "red"
         table.add_row(
             tx["added"][:10],
             tx["team_name"],
@@ -248,18 +248,18 @@ def print_transactions_feed(feed, limit=15):
 
 def print_trades_feed(feed):
     if not feed:
-        console.print("[dim]Ingen foreslåtte trades mellom managere akkurat nå.[/]")
+        console.print("[dim]No trades proposed between managers right now.[/]")
         return
 
     table = Table(
-        title="🤝 Foreslåtte trades mellom managere",
+        title="🤝 Proposed trades between managers",
         box=box.ROUNDED,
         header_style="bold cyan",
     )
-    table.add_column("Fra", min_width=18)
-    table.add_column("Til", min_width=18)
-    table.add_column("Gir", min_width=20)
-    table.add_column("Får", min_width=20)
+    table.add_column("From", min_width=18)
+    table.add_column("To", min_width=18)
+    table.add_column("Gives", min_width=20)
+    table.add_column("Receives", min_width=20)
     table.add_column("Status", width=16)
 
     for t in feed:
@@ -269,150 +269,150 @@ def print_trades_feed(feed):
 
 def print_trade_opportunities(opportunities):
     if not opportunities:
-        console.print("[dim]Fant ingen gode trade-muligheter akkurat nå.[/]")
+        console.print("[dim]No good trade opportunities found right now.[/]")
         return
 
     table = Table(
-        title="🔄 Trade-muligheter",
+        title="🔄 Trade opportunities",
         box=box.ROUNDED,
         header_style="bold magenta",
     )
     table.add_column("Manager", min_width=18)
-    table.add_column("Du gir", min_width=24)
-    table.add_column("Du får", min_width=24)
-    table.add_column("Gevinst", justify="right", width=8)
+    table.add_column("You give", min_width=24)
+    table.add_column("You get", min_width=24)
+    table.add_column("Gain", justify="right", width=8)
 
     for o in opportunities:
         give = ", ".join(f"{p.position} {p.name}" for p in o["give"])
         receive = ", ".join(f"{p.position} {p.name}" for p in o["receive"])
         table.add_row(o["other_manager"], give, receive, f"+{o['my_gain']}")
     console.print(table)
-    console.print("[dim]NB: forslag til deg – den andre manageren må også vurdere det verdt det.[/]")
+    console.print("[dim]NB: a suggestion for you – the other manager also has to consider it worth it.[/]")
 
 
 def print_waiver_timing(report):
     pick, total = report["my_waiver_pick"], report["total_entries"]
     if pick is None:
-        console.print("[dim]Fant ikke waiver-prioritet.[/]")
+        console.print("[dim]Couldn't find waiver priority.[/]")
         return
 
-    console.print(f"[bold]Din waiver-prioritet denne runden:[/] #{pick} av {total} "
-                  f"({'du velger tidlig' if pick <= total / 2 else 'du velger sent'})\n")
+    console.print(f"[bold]Your waiver priority this round:[/] #{pick} of {total} "
+                  f"({'you pick early' if pick <= total / 2 else 'you pick late'})\n")
 
     table = Table(
-        title="⏱️  Waiver-mål og risiko for å bli tatt før din tur",
+        title="⏱️  Waiver targets and risk of being taken before your turn",
         box=box.ROUNDED,
         header_style="bold red",
     )
-    table.add_column("Spiller", min_width=22)
+    table.add_column("Player", min_width=22)
     table.add_column("Pos", width=5)
     table.add_column("Score", justify="right", width=7)
-    table.add_column("Risiko", min_width=30)
+    table.add_column("Risk", min_width=30)
 
     for t in report["targets"]:
         p = t["player"]
-        risk = ", ".join(t["threatened_by"]) if t["threatened_by"] else "[dim]Lav risiko[/]"
+        risk = ", ".join(t["threatened_by"]) if t["threatened_by"] else "[dim]Low risk[/]"
         table.add_row(p.name, p.position, str(p.recommendation_score), risk)
     console.print(table)
 
 
 def main():
-    console.print(Panel("[bold green]FPL Draft Helper 🏆[/]", subtitle="Henter data...", expand=False))
+    console.print(Panel("[bold green]FPL Draft Helper 🏆[/]", subtitle="Fetching data...", expand=False))
 
     cookie_header = get_cookie_header()
     entry_id = get_entry_id()
     client = FPLDraftClient(cookie_header)
 
-    # ── Hent grunndata ────────────────────────────────────────────────────────
-    with console.status("Henter bootstrap-data..."):
+    # ── Fetch base data ──────────────────────────────────────────────────────
+    with console.status("Fetching bootstrap data..."):
         bootstrap = client.get_bootstrap()
 
-    with console.status("Henter brukerinfo..."):
+    with console.status("Fetching user info..."):
         entry_info = client.get_entry_info(entry_id)
 
     league_id = entry_info["entry"]["league_set"][0] if entry_info["entry"].get("league_set") else None
-    team_name = entry_info["entry"].get("name", "Laget ditt")
+    team_name = entry_info["entry"].get("name", "Your team")
 
-    with console.status("Henter gameweek-info..."):
+    with console.status("Fetching gameweek info..."):
         current_gw = client.get_current_gameweek()
         next_gw = current_gw + 1
 
-    console.print(f"\n[bold]Lag:[/] {team_name}  |  [bold]Siste GW:[/] {current_gw}  |  [bold]Neste GW:[/] {next_gw}\n")
+    console.print(f"\n[bold]Team:[/] {team_name}  |  [bold]Last GW:[/] {current_gw}  |  [bold]Next GW:[/] {next_gw}\n")
 
-    # ── Hent ligadata og picks ────────────────────────────────────────────────
-    # element-status viser eierskap i realtid, i motsetning til get_my_picks() som
-    # bare har data for gameweeks som allerede er låst/startet. Bruk den til laget
-    # ditt når vi har en liga, så transfers du nettopp har gjort vises riktig.
+    # ── Fetch league data and picks ──────────────────────────────────────────
+    # element-status shows ownership in real time, unlike get_my_picks() which
+    # only has data for gameweeks that have already locked/started. Use it for
+    # your team when we have a league, so transfers you just made show up correctly.
     element_status, league_details = None, None
     if league_id:
-        with console.status("Henter ligainfo..."):
+        with console.status("Fetching league info..."):
             try:
                 element_status = client.get_league_element_status(league_id)
                 league_details = client.get_league_details(league_id)
             except Exception as e:
-                console.print(f"[yellow]Kunne ikke hente ligadata: {e}[/]")
+                console.print(f"[yellow]Could not fetch league data: {e}[/]")
 
-    with console.status(f"Henter laget for GW{next_gw}..."):
+    with console.status(f"Fetching your team for GW{next_gw}..."):
         if element_status:
             picks = build_current_squad_picks(element_status, entry_id)
         else:
             picks = client.get_my_picks(entry_id, current_gw)
 
-    # ── Hent spillerhistorikk ────────────────────────────────────────────────
+    # ── Fetch player history ─────────────────────────────────────────────────
     player_ids = [p["element"] for p in picks["picks"]]
     player_histories = {}
-    with console.status("Henter spillerhistorikk..."):
+    with console.status("Fetching player history..."):
         for pid in player_ids:
             try:
                 player_histories[pid] = client.get_player_history(pid)
             except Exception:
                 player_histories[pid] = {}
 
-    # ── Hent fixtures for neste GW (med FDR) ─────────────────────────────────
-    with console.status("Henter fixtures..."):
+    # ── Fetch fixtures for the next GW (with FDR) ────────────────────────────
+    with console.status("Fetching fixtures..."):
         fixtures = client.get_fixtures_for_gameweek(next_gw)
 
-    # ── Analyser laget ────────────────────────────────────────────────────────
-    with console.status("Analyserer laget..."):
+    # ── Analyze the squad ────────────────────────────────────────────────────
+    with console.status("Analyzing your squad..."):
         players = analyze_squad(picks, bootstrap, next_gw, player_histories, fixtures)
         apply_club_change_notes(players, current_gw)
         starters, bench = recommend_starting_xi(players)
 
-    # ── Vis resultater ────────────────────────────────────────────────────────
-    console.rule(f"[bold cyan]GW{next_gw} – Anbefalt oppstilling[/]")
+    # ── Show results ─────────────────────────────────────────────────────────
+    console.rule(f"[bold cyan]GW{next_gw} – Recommended lineup[/]")
     print_squad_table(starters, bench)
 
-    # ── Waiver-anbefalinger og ligaoversikt ──────────────────────────────────
+    # ── Waiver recommendations and league overview ───────────────────────────
     if league_id:
         free_agents = []
         if element_status:
-            console.rule("[bold magenta]Ledige spillere du kan hente[/]")
+            console.rule("[bold magenta]Free agents you can pick up[/]")
             try:
                 free_agents = analyze_free_agents(element_status, bootstrap, next_gw, fixtures)
                 apply_club_change_notes(free_agents, current_gw)
                 print_waiver_table(free_agents[:10])
             except Exception as e:
-                console.print(f"[yellow]Kunne ikke regne ut waiver-anbefalinger: {e}[/]")
+                console.print(f"[yellow]Could not calculate waiver recommendations: {e}[/]")
 
         if free_agents:
-            console.rule("[bold green]Anbefalte bytter[/]")
+            console.rule("[bold green]Recommended transfers[/]")
             try:
                 suggestions = suggest_transfers(players, free_agents)
                 print_transfer_suggestions(suggestions)
             except Exception as e:
-                console.print(f"[yellow]Kunne ikke regne ut byttanbefalinger: {e}[/]")
+                console.print(f"[yellow]Could not calculate transfer recommendations: {e}[/]")
 
         if element_status and league_details:
-            console.rule("[bold blue]Ligaoversikt[/]")
+            console.rule("[bold blue]League overview[/]")
             try:
                 overview = build_league_overview(league_details, element_status, bootstrap)
                 print_league_overview(overview)
             except Exception as e:
-                console.print(f"[yellow]Kunne ikke bygge ligaoversikt: {e}[/]")
+                console.print(f"[yellow]Could not build league overview: {e}[/]")
 
         owned_by_entry = {}
         if element_status and league_details:
-            console.rule("[bold magenta]Trade-muligheter[/]")
+            console.rule("[bold magenta]Trade opportunities[/]")
             try:
                 owned_by_entry = analyze_all_owned_players(element_status, bootstrap, next_gw, fixtures)
                 for entry_players in owned_by_entry.values():
@@ -420,37 +420,37 @@ def main():
                 opportunities = find_trade_opportunities(owned_by_entry, entry_id, league_details)
                 print_trade_opportunities(opportunities)
             except Exception as e:
-                console.print(f"[yellow]Kunne ikke regne ut trade-muligheter: {e}[/]")
+                console.print(f"[yellow]Could not calculate trade opportunities: {e}[/]")
 
         if free_agents and league_details:
-            console.rule("[bold red]Waiver-timing[/]")
+            console.rule("[bold red]Waiver timing[/]")
             try:
                 report = build_waiver_timing_report(league_details, owned_by_entry, free_agents, entry_id)
                 print_waiver_timing(report)
             except Exception as e:
-                console.print(f"[yellow]Kunne ikke bygge waiver-timing-rapport: {e}[/]")
+                console.print(f"[yellow]Could not build waiver timing report: {e}[/]")
 
         if league_details:
-            console.rule("[bold yellow]Waiver/transfer-historikk[/]")
+            console.rule("[bold yellow]Waiver/transfer history[/]")
             try:
                 transactions = client.get_transactions(league_id)
                 feed = build_transactions_feed(transactions, league_details, bootstrap)
                 print_transactions_feed(feed)
             except Exception as e:
-                console.print(f"[yellow]Kunne ikke hente transaksjonshistorikk: {e}[/]")
+                console.print(f"[yellow]Could not fetch transaction history: {e}[/]")
 
         if league_details:
-            console.rule("[bold cyan]Foreslåtte trades[/]")
+            console.rule("[bold cyan]Proposed trades[/]")
             try:
                 trades = client.get_trades(league_id)
                 trades_feed = build_trades_feed(trades, league_details, bootstrap)
                 print_trades_feed(trades_feed)
             except Exception as e:
-                console.print(f"[yellow]Kunne ikke hente trades: {e}[/]")
+                console.print(f"[yellow]Could not fetch trades: {e}[/]")
     else:
-        console.print("[dim]Ingen liga funnet – hopper over waiver- og ligadata.[/]")
+        console.print("[dim]No league found – skipping waiver and league data.[/]")
 
-    console.print("\n[dim]Tips: Sjekk alltid lagoppsett og skader på fantasyfootballscout.co.uk før deadline![/]\n")
+    console.print("\n[dim]Tip: Always check team news and injuries on fantasyfootballscout.co.uk before the deadline![/]\n")
 
 
 if __name__ == "__main__":

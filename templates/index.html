@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>FPL Draft Helper</title>
@@ -189,16 +189,45 @@
     .player-fixture-pill.fdr-1, .player-fixture-pill.fdr-2 { background: var(--green); color: white; }
     .player-fixture-pill.fdr-3 { background: var(--yellow); color: #1a1a1a; }
     .player-fixture-pill.fdr-4, .player-fixture-pill.fdr-5 { background: var(--red); color: white; }
+    .pitch-mini {
+        padding: 16px 8px 34px;
+        gap: 14px;
+    }
+    .pitch-mini::before, .pitch-mini::after { display: none; }
+    .pitch-mini .player-card { width: 62px; }
+    .pitch-mini .player-shirt { width: 28px; height: 28px; font-size: 10px; margin-bottom: 4px; }
+    .pitch-mini .player-name-pill { font-size: 10px; padding: 2px 5px; max-width: 68px; }
+    .pitch-mini .player-fixture-pill { font-size: 9px; padding: 1px 4px; margin-top: 2px; }
+    .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 24px;
+    }
+    .tab-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 600;
+        padding: 10px 16px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--text); border-bottom-color: var(--blue); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
 </style>
 </head>
 <body>
     <h1>🏆 FPL Draft Helper</h1>
 
     {% if error %}
-        <div class="error"><strong>Feil:</strong> {{ error }}</div>
+        <div class="error"><strong>Error:</strong> {{ error }}</div>
     {% else %}
         <div class="subtitle">
-            {{ team_name }} · Siste GW: {{ current_gw }} · Neste GW: {{ next_gw }}
+            {{ team_name }} · Last GW: {{ current_gw }} · Next GW: {{ next_gw }}
         </div>
 
         {% macro player_card(p) %}
@@ -212,159 +241,187 @@
         </div>
         {% endmacro %}
 
-        <h2>📋 Anbefalt startlag – GW{{ next_gw }}</h2>
-        <div class="pitch">
+        {% macro formation(players, mini=False) %}
+        <div class="pitch {{ 'pitch-mini' if mini else '' }}">
             <div class="pitch-row">
-                {% for p in starters | selectattr('position', 'equalto', 'GKP') %}{{ player_card(p) }}{% endfor %}
+                {% for p in players | selectattr('position', 'equalto', 'GKP') %}{{ player_card(p) }}{% endfor %}
             </div>
             <div class="pitch-row">
-                {% for p in starters | selectattr('position', 'equalto', 'DEF') %}{{ player_card(p) }}{% endfor %}
+                {% for p in players | selectattr('position', 'equalto', 'DEF') %}{{ player_card(p) }}{% endfor %}
             </div>
             <div class="pitch-row">
-                {% for p in starters | selectattr('position', 'equalto', 'MID') %}{{ player_card(p) }}{% endfor %}
+                {% for p in players | selectattr('position', 'equalto', 'MID') %}{{ player_card(p) }}{% endfor %}
             </div>
             <div class="pitch-row">
-                {% for p in starters | selectattr('position', 'equalto', 'FWD') %}{{ player_card(p) }}{% endfor %}
+                {% for p in players | selectattr('position', 'equalto', 'FWD') %}{{ player_card(p) }}{% endfor %}
             </div>
         </div>
+        {% endmacro %}
 
-        <h2>🪑 Benk</h2>
-        <table>
-            <tr><th>Pos</th><th>Spiller</th><th>Lag</th><th>Neste kamp</th><th>Notat</th></tr>
-            {% for p in bench %}
-            <tr>
-                <td><span class="pos-badge">{{ p.position }}</span></td>
-                <td>{{ p.name }}</td>
-                <td>{{ p.team }}</td>
-                <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
-                <td class="note">{{ p.recommendation_note }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-
-        {% if waiver_targets %}
-        <h2>🔄 Waiver/Free Agent-anbefalinger</h2>
-        <table>
-            <tr>
-                <th>#</th><th>Pos</th><th>Spiller</th><th>Lag</th><th>Form</th>
-                <th>Total pts</th><th>Neste kamp</th><th>Score</th><th>Notat</th>
-            </tr>
-            {% for p in waiver_targets %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td><span class="pos-badge">{{ p.position }}</span></td>
-                <td>{{ p.name }}</td>
-                <td>{{ p.team }}</td>
-                <td>{{ p.form }}</td>
-                <td>{{ p.total_points }}</td>
-                <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
-                <td class="{{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}">
-                    {{ p.recommendation_score }}
-                </td>
-                <td class="note">{{ p.recommendation_note }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
-
-        {% if waiver_timing and waiver_timing.my_waiver_pick %}
-        <h2>⏱️ Waiver-timing</h2>
-        <p class="subtitle">
-            Din waiver-prioritet denne runden: <strong>#{{ waiver_timing.my_waiver_pick }} av {{ waiver_timing.total_entries }}</strong>
-        </p>
-        <table>
-            <tr><th>Spiller</th><th>Pos</th><th>Score</th><th>Risiko for å bli tatt før din tur</th></tr>
-            {% for t in waiver_timing.targets %}
-            <tr>
-                <td>{{ t.player.name }}</td>
-                <td><span class="pos-badge">{{ t.player.position }}</span></td>
-                <td>{{ t.player.recommendation_score }}</td>
-                <td class="{{ 'score-low' if t.threatened_by else 'note' }}">
-                    {{ t.threatened_by | join(', ') if t.threatened_by else 'Lav risiko' }}
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
-
-        {% if transfer_suggestions %}
-        <h2>🔁 Anbefalte bytter</h2>
-        <table>
-            <tr><th>Pos</th><th>Bytt ut</th><th>Hent inn</th><th>Gevinst</th></tr>
-            {% for s in transfer_suggestions %}
-            <tr>
-                <td><span class="pos-badge">{{ s.position }}</span></td>
-                <td>{{ s.drop.name }} ({{ s.drop.team }}) <span class="note">score {{ s.drop.recommendation_score }}</span></td>
-                <td>{{ s.add.name }} ({{ s.add.team }}) <span class="note">score {{ s.add.recommendation_score }}</span></td>
-                <td class="score-high">+{{ s.score_gain }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
-
-        {% if league_overview %}
-        <h2>🏆 Ligaoversikt</h2>
-        {% for entry in league_overview %}
-        <div class="league-card">
-            <div class="team-header">
-                <div><span class="rank">#{{ entry.rank }}</span>{{ entry.team_name }} <span class="note">({{ entry.manager }})</span></div>
-                <div class="points">{{ entry.total_points }} p <span class="note">(GW: {{ entry.event_points }})</span></div>
-            </div>
-            <div class="squad-list">
-                {% for player in entry.squad %}{{ player.position }} {{ player.name }}{% if not loop.last %} · {% endif %}{% endfor %}
-            </div>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="team">📋 My Team</button>
+            <button class="tab-btn" data-tab="waiver">🔄 Waiver/Free Agent</button>
+            <button class="tab-btn" data-tab="league">🏆 League Overview</button>
+            <button class="tab-btn" data-tab="history">📜 Transfer History</button>
         </div>
-        {% endfor %}
-        {% endif %}
 
-        {% if trade_opportunities %}
-        <h2>🔄 Trade-muligheter</h2>
-        <table>
-            <tr><th>Manager</th><th>Du gir</th><th>Du får</th><th>Gevinst</th></tr>
-            {% for o in trade_opportunities %}
-            <tr>
-                <td>{{ o.other_manager }}</td>
-                <td>{% for p in o.give %}{{ p.position }} {{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-                <td>{% for p in o.receive %}{{ p.position }} {{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-                <td class="score-high">+{{ o.my_gain }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        <p class="note">NB: forslag til deg – den andre manageren må også vurdere det verdt det.</p>
-        {% endif %}
+        <div class="tab-panel active" id="tab-team">
+            <h2>📋 Recommended starting lineup – GW{{ next_gw }}</h2>
+            {{ formation(starters) }}
 
-        {% if transactions_feed %}
-        <h2>📜 Waiver/transfer-historikk i ligaen</h2>
-        <table>
-            <tr><th>Dato</th><th>Lag</th><th>Type</th><th>Inn</th><th>Ut</th><th>Resultat</th></tr>
-            {% for tx in transactions_feed %}
-            <tr>
-                <td>{{ tx.added[:10] }}</td>
-                <td>{{ tx.team_name }}</td>
-                <td>{{ tx.kind }}</td>
-                <td>{{ tx.player_in }}</td>
-                <td>{{ tx.player_out }}</td>
-                <td class="{{ 'score-high' if tx.result == 'Godkjent' else 'score-low' }}">{{ tx.result }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
+            <h2>🪑 Bench</h2>
+            <table>
+                <tr><th>Pos</th><th>Player</th><th>Team</th><th>Next match</th><th>Note</th></tr>
+                {% for p in bench %}
+                <tr>
+                    <td><span class="pos-badge">{{ p.position }}</span></td>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.team }}</td>
+                    <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
+                    <td class="note">{{ p.recommendation_note }}</td>
+                </tr>
+                {% endfor %}
+            </table>
 
-        {% if trades_feed %}
-        <h2>🤝 Foreslåtte trades mellom managere</h2>
-        <table>
-            <tr><th>Fra</th><th>Til</th><th>Gir</th><th>Får</th><th>Status</th></tr>
-            {% for t in trades_feed %}
-            <tr>
-                <td>{{ t.proposer }}</td>
-                <td>{{ t.counterpart }}</td>
-                <td>{{ t.gives }}</td>
-                <td>{{ t.receives }}</td>
-                <td>{{ t.state }}</td>
-            </tr>
+            {% if transfer_suggestions %}
+            <h2>🔁 Recommended transfers</h2>
+            <table>
+                <tr><th>Pos</th><th>Drop</th><th>Add</th><th>Gain</th></tr>
+                {% for s in transfer_suggestions %}
+                <tr>
+                    <td><span class="pos-badge">{{ s.position }}</span></td>
+                    <td>{{ s.drop.name }} ({{ s.drop.team }}) <span class="note">score {{ s.drop.recommendation_score }}</span></td>
+                    <td>{{ s.add.name }} ({{ s.add.team }}) <span class="note">score {{ s.add.recommendation_score }}</span></td>
+                    <td class="score-high">+{{ s.score_gain }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+
+        <div class="tab-panel" id="tab-waiver">
+            {% if waiver_targets %}
+            <h2>🔄 Waiver/Free Agent recommendations</h2>
+            <table>
+                <tr>
+                    <th>#</th><th>Pos</th><th>Player</th><th>Team</th><th>Form</th>
+                    <th>Total pts</th><th>Next match</th><th>Score</th><th>Note</th>
+                </tr>
+                {% for p in waiver_targets %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><span class="pos-badge">{{ p.position }}</span></td>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.team }}</td>
+                    <td>{{ p.form }}</td>
+                    <td>{{ p.total_points }}</td>
+                    <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
+                    <td class="{{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}">
+                        {{ p.recommendation_score }}
+                    </td>
+                    <td class="note">{{ p.recommendation_note }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+
+            {% if waiver_timing and waiver_timing.my_waiver_pick %}
+            <h2>⏱️ Waiver timing</h2>
+            <p class="subtitle">
+                Your waiver priority this round: <strong>#{{ waiver_timing.my_waiver_pick }} of {{ waiver_timing.total_entries }}</strong>
+            </p>
+            <table>
+                <tr><th>Player</th><th>Pos</th><th>Score</th><th>Risk of being taken before your turn</th></tr>
+                {% for t in waiver_timing.targets %}
+                <tr>
+                    <td>{{ t.player.name }}</td>
+                    <td><span class="pos-badge">{{ t.player.position }}</span></td>
+                    <td>{{ t.player.recommendation_score }}</td>
+                    <td class="{{ 'score-low' if t.threatened_by else 'note' }}">
+                        {{ t.threatened_by | join(', ') if t.threatened_by else 'Low risk' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+
+        <div class="tab-panel" id="tab-league">
+            {% if league_squads %}
+            <h2>🏆 League overview</h2>
+            {% for entry in league_squads %}
+            <div class="league-card">
+                <div class="team-header">
+                    <div><span class="rank">#{{ entry.rank }}</span>{{ entry.team_name }} <span class="note">({{ entry.manager }})</span></div>
+                    <div class="points">{{ entry.total_points }} pts <span class="note">(GW: {{ entry.event_points }})</span></div>
+                </div>
+                {{ formation(entry.starters, mini=True) }}
+            </div>
             {% endfor %}
-        </table>
-        {% endif %}
+            {% endif %}
+
+            {% if trade_opportunities %}
+            <h2>🔄 Trade opportunities</h2>
+            <table>
+                <tr><th>Manager</th><th>You give</th><th>You get</th><th>Gain</th></tr>
+                {% for o in trade_opportunities %}
+                <tr>
+                    <td>{{ o.other_manager }}</td>
+                    <td>{% for p in o.give %}{{ p.position }} {{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+                    <td>{% for p in o.receive %}{{ p.position }} {{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+                    <td class="score-high">+{{ o.my_gain }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            <p class="note">NB: a suggestion for you – the other manager also has to consider it worth it.</p>
+            {% endif %}
+        </div>
+
+        <div class="tab-panel" id="tab-history">
+            {% if transactions_feed %}
+            <h2>📜 Waiver/transfer history in the league</h2>
+            <table>
+                <tr><th>Date</th><th>Team</th><th>Type</th><th>In</th><th>Out</th><th>Result</th></tr>
+                {% for tx in transactions_feed %}
+                <tr>
+                    <td>{{ tx.added[:10] }}</td>
+                    <td>{{ tx.team_name }}</td>
+                    <td>{{ tx.kind }}</td>
+                    <td>{{ tx.player_in }}</td>
+                    <td>{{ tx.player_out }}</td>
+                    <td class="{{ 'score-high' if tx.result == 'Approved' else 'score-low' }}">{{ tx.result }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+
+            {% if trades_feed %}
+            <h2>🤝 Proposed trades between managers</h2>
+            <table>
+                <tr><th>From</th><th>To</th><th>Gives</th><th>Receives</th><th>Status</th></tr>
+                {% for t in trades_feed %}
+                <tr>
+                    <td>{{ t.proposer }}</td>
+                    <td>{{ t.counterpart }}</td>
+                    <td>{{ t.gives }}</td>
+                    <td>{{ t.receives }}</td>
+                    <td>{{ t.state }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+
+        <script>
+            document.querySelectorAll('.tab-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+                    document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+                    btn.classList.add('active');
+                    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+                });
+            });
+        </script>
     {% endif %}
 </body>
 </html>

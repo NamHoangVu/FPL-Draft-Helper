@@ -1,6 +1,6 @@
 """
 FPL Draft API Client
-Henter data fra draft.premierleague.com
+Fetches data from draft.premierleague.com
 """
 
 import requests
@@ -20,10 +20,10 @@ HEADERS = {
 class FPLDraftClient:
     def __init__(self, raw_cookie_header: str):
         """
-        raw_cookie_header: hele Cookie-header-verdien fra en innlogget forespørsel
-        mot draft.premierleague.com/api/me, kopiert fra DevTools → Network.
-        Nødvendig for kontoer som logger inn via Google/SSO, der det ikke finnes
-        et fast cookie-navn (som pl_profile) man kan stole på.
+        raw_cookie_header: the entire Cookie header value from a logged-in request
+        to draft.premierleague.com/api/me, copied from DevTools → Network.
+        Needed for accounts that log in via Google/SSO, where there's no fixed
+        cookie name (like pl_profile) you can rely on.
         """
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
@@ -33,7 +33,7 @@ class FPLDraftClient:
     # ── Bootstrap (all player/team/fixture data) ──────────────────────────────
 
     def get_bootstrap(self) -> dict:
-        """Henter all grunndata: spillere, lag, fixtures, gameweeks."""
+        """Fetches all base data: players, teams, fixtures, gameweeks."""
         if self._bootstrap is None:
             r = self.session.get(f"{BASE_URL}/bootstrap-static")
             r.raise_for_status()
@@ -41,7 +41,7 @@ class FPLDraftClient:
         return self._bootstrap
 
     def get_current_gameweek(self) -> int:
-        """Returnerer nåværende gameweek-nummer."""
+        """Returns the current gameweek number."""
         r = self.session.get(f"{BASE_URL}/game")
         r.raise_for_status()
         data = r.json()
@@ -52,18 +52,18 @@ class FPLDraftClient:
 
     def get_fixtures_for_gameweek(self, gameweek: int) -> list:
         """
-        Draft-API'et har ikke fixture difficulty rating (FDR), så vi henter
-        fixtures med FDR fra den offentlige classic-FPL-API'et i stedet.
-        Lag-ID-ene er de samme i begge API-ene.
+        The Draft API doesn't have a fixture difficulty rating (FDR), so we fetch
+        fixtures with FDR from the public classic FPL API instead.
+        The team IDs are the same in both APIs.
         """
         r = requests.get(f"{CLASSIC_BASE_URL}/fixtures/", params={"event": gameweek})
         r.raise_for_status()
         return r.json()
 
-    # ── Bruker og lag ─────────────────────────────────────────────────────────
+    # ── User and team ────────────────────────────────────────────────────────
 
     def get_my_picks(self, entry_id: int, gameweek: int) -> dict:
-        """Henter laget ditt (startere + benk) for en gitt gameweek."""
+        """Fetches your team (starters + bench) for a given gameweek."""
         r = self.session.get(f"{BASE_URL}/entry/{entry_id}/event/{gameweek}")
         r.raise_for_status()
         return r.json()
@@ -73,10 +73,10 @@ class FPLDraftClient:
         r.raise_for_status()
         return r.json()
 
-    # ── Spillerdetaljer ───────────────────────────────────────────────────────
+    # ── Player details ───────────────────────────────────────────────────────
 
     def get_player_history(self, player_id: int) -> dict:
-        """Henter historikk og siste kamper for en spiller."""
+        """Fetches history and recent matches for a player."""
         r = self.session.get(f"{BASE_URL}/element-summary/{player_id}")
         r.raise_for_status()
         return r.json()
@@ -84,25 +84,25 @@ class FPLDraftClient:
     # ── League / waiver ───────────────────────────────────────────────────────
 
     def get_league_element_status(self, league_id: int) -> dict:
-        """Viser hvilke spillere som er ledige (waiver/free agent) i ligaen, og hvem som eier resten."""
+        """Shows which players are free agents in the league, and who owns the rest."""
         r = self.session.get(f"{BASE_URL}/league/{league_id}/element-status")
         r.raise_for_status()
         return r.json()
 
     def get_league_details(self, league_id: int) -> dict:
-        """Henter managere, standings og liga-info."""
+        """Fetches managers, standings, and league info."""
         r = self.session.get(f"{BASE_URL}/league/{league_id}/details")
         r.raise_for_status()
         return r.json()
 
     def get_transactions(self, league_id: int) -> dict:
-        """Historikk over gjennomførte waivers/free agent-hentinger/trades."""
+        """History of completed waivers/free agent pickups/trades."""
         r = self.session.get(f"{BASE_URL}/draft/league/{league_id}/transactions")
         r.raise_for_status()
         return r.json()
 
     def get_trades(self, league_id: int) -> dict:
-        """Pågående/foreslåtte trades mellom managere (før de er godkjent/avvist)."""
+        """Pending/proposed trades between managers (before they're accepted/rejected)."""
         r = self.session.get(f"{BASE_URL}/draft/league/{league_id}/trades")
         r.raise_for_status()
         return r.json()

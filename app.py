@@ -1,6 +1,6 @@
 """
-FPL Draft Helper – nettside
-Kjør: python app.py, åpne http://127.0.0.1:5000
+FPL Draft Helper - website
+Run: python app.py, open http://127.0.0.1:5000
 """
 
 import os
@@ -15,7 +15,7 @@ from analyzer import (
     analyze_free_agents,
     analyze_all_owned_players,
     suggest_transfers,
-    build_league_overview,
+    build_league_squads,
     build_transactions_feed,
     build_trades_feed,
     find_trade_opportunities,
@@ -32,14 +32,14 @@ FDR_CLASS = {1: "fdr-1", 2: "fdr-2", 3: "fdr-3", 4: "fdr-4", 5: "fdr-5"}
 def get_client() -> FPLDraftClient:
     cookie = os.getenv("PL_COOKIE_HEADER")
     if not cookie:
-        raise RuntimeError("Mangler PL_COOKIE_HEADER i .env")
+        raise RuntimeError("Missing PL_COOKIE_HEADER in .env")
     return FPLDraftClient(cookie)
 
 
 def get_entry_id() -> int:
     entry_id = os.getenv("PL_ENTRY_ID")
     if not entry_id:
-        raise RuntimeError("Mangler PL_ENTRY_ID i .env")
+        raise RuntimeError("Missing PL_ENTRY_ID in .env")
     return int(entry_id)
 
 
@@ -55,14 +55,14 @@ def index():
         bootstrap = client.get_bootstrap()
         entry_info = client.get_entry_info(entry_id)
         league_id = entry_info["entry"]["league_set"][0] if entry_info["entry"].get("league_set") else None
-        team_name = entry_info["entry"].get("name", "Laget ditt")
+        team_name = entry_info["entry"].get("name", "Your team")
 
         current_gw = client.get_current_gameweek()
         next_gw = current_gw + 1
 
-        # element-status viser eierskap i realtid, i motsetning til get_my_picks() som
-        # bare har data for gameweeks som allerede er låst/startet. Bruk den til laget
-        # ditt når vi har en liga, så transfers du nettopp har gjort vises riktig.
+        # element-status shows ownership in real time, unlike get_my_picks() which
+        # only has data for gameweeks that have already locked/started. Use it for
+        # your team when we have a league, so transfers you just made show up correctly.
         element_status, league_details = None, None
         if league_id:
             element_status = client.get_league_element_status(league_id)
@@ -88,7 +88,7 @@ def index():
 
         waiver_targets = []
         transfer_suggestions = []
-        league_overview = []
+        league_squads = []
         transactions_feed = []
         trades_feed = []
         trade_opportunities = []
@@ -98,7 +98,6 @@ def index():
             apply_club_change_notes(free_agents, current_gw)
             waiver_targets = free_agents[:10]
             transfer_suggestions = suggest_transfers(players, free_agents)
-            league_overview = build_league_overview(league_details, element_status, bootstrap)
             transactions = client.get_transactions(league_id)
             transactions_feed = build_transactions_feed(transactions, league_details, bootstrap)[:20]
             trades = client.get_trades(league_id)
@@ -109,6 +108,7 @@ def index():
                 apply_club_change_notes(entry_players, current_gw)
             trade_opportunities = find_trade_opportunities(owned_by_entry, entry_id, league_details)
             waiver_timing = build_waiver_timing_report(league_details, owned_by_entry, free_agents, entry_id)
+            league_squads = build_league_squads(league_details, owned_by_entry)
 
         context = {
             "team_name": team_name,
@@ -118,7 +118,7 @@ def index():
             "bench": bench,
             "waiver_targets": waiver_targets,
             "transfer_suggestions": transfer_suggestions,
-            "league_overview": league_overview,
+            "league_squads": league_squads,
             "transactions_feed": transactions_feed,
             "trades_feed": trades_feed,
             "trade_opportunities": trade_opportunities,
