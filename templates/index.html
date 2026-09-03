@@ -100,6 +100,95 @@
         color: var(--text);
         font-weight: 600;
     }
+    .pitch {
+        position: relative;
+        background:
+            repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 40px, transparent 40px, transparent 80px),
+            linear-gradient(180deg, #1f7a3d 0%, #2a9950 50%, #1f7a3d 100%);
+        border: 1px solid #14532d;
+        border-radius: 12px;
+        padding: 28px 16px 60px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        overflow: hidden;
+    }
+    .pitch::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 50%;
+        width: 220px; height: 70px;
+        margin-left: -110px;
+        border: 2px solid rgba(255,255,255,0.35);
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+    }
+    .pitch::after {
+        content: "";
+        position: absolute;
+        bottom: -70px; left: 50%;
+        width: 140px; height: 140px;
+        margin-left: -70px;
+        border: 2px solid rgba(255,255,255,0.35);
+        border-radius: 50%;
+    }
+    .pitch-row {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        position: relative;
+        z-index: 1;
+    }
+    .player-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 92px;
+        text-align: center;
+    }
+    .player-shirt {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: #38003c;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 12px;
+        margin-bottom: 6px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        cursor: help;
+    }
+    .player-shirt.score-high { border: 2px solid var(--green); }
+    .player-shirt.score-mid { border: 2px solid var(--yellow); }
+    .player-shirt.score-low { border: 2px solid var(--red); }
+    .player-name-pill {
+        background: #38003c;
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 4px;
+        max-width: 100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .player-fixture-pill {
+        background: rgba(255,255,255,0.85);
+        color: #0f1420;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-top: 3px;
+        white-space: nowrap;
+    }
+    .player-fixture-pill.fdr-1, .player-fixture-pill.fdr-2 { background: var(--green); color: white; }
+    .player-fixture-pill.fdr-3 { background: var(--yellow); color: #1a1a1a; }
+    .player-fixture-pill.fdr-4, .player-fixture-pill.fdr-5 { background: var(--red); color: white; }
 </style>
 </head>
 <body>
@@ -112,27 +201,32 @@
             {{ team_name }} · Siste GW: {{ current_gw }} · Neste GW: {{ next_gw }}
         </div>
 
+        {% macro player_card(p) %}
+        <div class="player-card">
+            <div class="player-shirt {{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}"
+                 title="{{ p.name }} · {{ p.form }} form · score {{ p.recommendation_score }}{% if p.recommendation_note %} · {{ p.recommendation_note }}{% endif %}">
+                {{ p.team }}
+            </div>
+            <div class="player-name-pill">{{ p.name }}</div>
+            <div class="player-fixture-pill {{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</div>
+        </div>
+        {% endmacro %}
+
         <h2>📋 Anbefalt startlag – GW{{ next_gw }}</h2>
-        <table>
-            <tr>
-                <th>Pos</th><th>Spiller</th><th>Lag</th><th>Form</th>
-                <th>Siste GW</th><th>Neste kamp</th><th>Score</th><th>Notat</th>
-            </tr>
-            {% for p in starters %}
-            <tr>
-                <td><span class="pos-badge">{{ p.position }}</span></td>
-                <td>{{ p.name }}</td>
-                <td>{{ p.team }}</td>
-                <td>{{ p.form }}</td>
-                <td>{{ p.points_last_gw }}</td>
-                <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
-                <td class="{{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}">
-                    {{ p.recommendation_score }}
-                </td>
-                <td class="note">{{ p.recommendation_note }}</td>
-            </tr>
-            {% endfor %}
-        </table>
+        <div class="pitch">
+            <div class="pitch-row">
+                {% for p in starters | selectattr('position', 'equalto', 'GKP') %}{{ player_card(p) }}{% endfor %}
+            </div>
+            <div class="pitch-row">
+                {% for p in starters | selectattr('position', 'equalto', 'DEF') %}{{ player_card(p) }}{% endfor %}
+            </div>
+            <div class="pitch-row">
+                {% for p in starters | selectattr('position', 'equalto', 'MID') %}{{ player_card(p) }}{% endfor %}
+            </div>
+            <div class="pitch-row">
+                {% for p in starters | selectattr('position', 'equalto', 'FWD') %}{{ player_card(p) }}{% endfor %}
+            </div>
+        </div>
 
         <h2>🪑 Benk</h2>
         <table>
