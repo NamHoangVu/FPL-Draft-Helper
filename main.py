@@ -14,6 +14,7 @@ from rich.text import Text
 
 from api import FPLDraftClient
 from analyzer import (
+    build_current_squad_picks,
     analyze_squad,
     recommend_starting_xi,
     analyze_free_agents,
@@ -338,9 +339,24 @@ def main():
 
     console.print(f"\n[bold]Lag:[/] {team_name}  |  [bold]Siste GW:[/] {current_gw}  |  [bold]Neste GW:[/] {next_gw}\n")
 
-    # ── Hent picks ────────────────────────────────────────────────────────────
-    with console.status(f"Henter laget for GW{current_gw}..."):
-        picks = client.get_my_picks(entry_id, current_gw)
+    # ── Hent ligadata og picks ────────────────────────────────────────────────
+    # element-status viser eierskap i realtid, i motsetning til get_my_picks() som
+    # bare har data for gameweeks som allerede er låst/startet. Bruk den til laget
+    # ditt når vi har en liga, så transfers du nettopp har gjort vises riktig.
+    element_status, league_details = None, None
+    if league_id:
+        with console.status("Henter ligainfo..."):
+            try:
+                element_status = client.get_league_element_status(league_id)
+                league_details = client.get_league_details(league_id)
+            except Exception as e:
+                console.print(f"[yellow]Kunne ikke hente ligadata: {e}[/]")
+
+    with console.status(f"Henter laget for GW{next_gw}..."):
+        if element_status:
+            picks = build_current_squad_picks(element_status, entry_id)
+        else:
+            picks = client.get_my_picks(entry_id, current_gw)
 
     # ── Hent spillerhistorikk ────────────────────────────────────────────────
     player_ids = [p["element"] for p in picks["picks"]]
@@ -368,14 +384,6 @@ def main():
 
     # ── Waiver-anbefalinger og ligaoversikt ──────────────────────────────────
     if league_id:
-        with console.status("Henter ligainfo..."):
-            try:
-                element_status = client.get_league_element_status(league_id)
-                league_details = client.get_league_details(league_id)
-            except Exception as e:
-                console.print(f"[yellow]Kunne ikke hente ligadata: {e}[/]")
-                element_status, league_details = None, None
-
         free_agents = []
         if element_status:
             console.rule("[bold magenta]Ledige spillere du kan hente[/]")

@@ -71,6 +71,24 @@ class PlayerAnalysis:
         return "❌"
 
 
+def build_current_squad_picks(league_element_status: dict, entry_id: int) -> dict:
+    """
+    Bygger et picks-objekt (samme form som get_my_picks()) fra league/element-status.
+
+    get_my_picks() henter en gameweeks *låste* oppstilling, som ikke finnes før den
+    gameweeken har startet – element-status viser derimot eierskap i realtid, så
+    dette fanger opp transfers/waivers du har gjort etter siste låste gameweek.
+    """
+    picks = [
+        {"element": status["element"], "position": i}
+        for i, status in enumerate(
+            (s for s in league_element_status.get("element_status", []) if s.get("owner") == entry_id),
+            start=1,
+        )
+    ]
+    return {"picks": picks}
+
+
 def build_player_lookup(bootstrap: dict) -> dict:
     """Bygger en dict med player_id -> player-data fra bootstrap."""
     return {p["id"]: p for p in bootstrap["elements"]}

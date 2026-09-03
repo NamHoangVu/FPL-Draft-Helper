@@ -9,6 +9,7 @@ from flask import Flask, render_template
 
 from api import FPLDraftClient
 from analyzer import (
+    build_current_squad_picks,
     analyze_squad,
     recommend_starting_xi,
     analyze_free_agents,
@@ -59,7 +60,18 @@ def index():
         current_gw = client.get_current_gameweek()
         next_gw = current_gw + 1
 
-        picks = client.get_my_picks(entry_id, current_gw)
+        # element-status viser eierskap i realtid, i motsetning til get_my_picks() som
+        # bare har data for gameweeks som allerede er låst/startet. Bruk den til laget
+        # ditt når vi har en liga, så transfers du nettopp har gjort vises riktig.
+        element_status, league_details = None, None
+        if league_id:
+            element_status = client.get_league_element_status(league_id)
+            league_details = client.get_league_details(league_id)
+
+        if element_status:
+            picks = build_current_squad_picks(element_status, entry_id)
+        else:
+            picks = client.get_my_picks(entry_id, current_gw)
         player_ids = [p["element"] for p in picks["picks"]]
         player_histories = {}
         for pid in player_ids:
@@ -82,8 +94,6 @@ def index():
         trade_opportunities = []
         waiver_timing = None
         if league_id:
-            element_status = client.get_league_element_status(league_id)
-            league_details = client.get_league_details(league_id)
             free_agents = analyze_free_agents(element_status, bootstrap, next_gw, fixtures)
             apply_club_change_notes(free_agents, current_gw)
             waiver_targets = free_agents[:10]
