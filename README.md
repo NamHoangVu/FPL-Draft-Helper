@@ -1,16 +1,16 @@
 # FPL Draft Helper
 
-Et lite verktøy for Fantasy Premier League **Draft**-ligaer. Henter laget ditt, ledige spillere og
-ligadata fra `draft.premierleague.com`, og gir anbefalinger for startoppstilling, waiver/free agent-mål,
-bytter og trades.
+A small tool for Fantasy Premier League **Draft** leagues. Pulls your team, free agents, and
+league data from `draft.premierleague.com`, and gives recommendations for your starting lineup,
+waiver/free agent targets, transfers, and trades.
 
-Tilgjengelig som:
-- **CLI** (`main.py`) – tabeller rett i terminalen
-- **Nettside** (`app.py`) – Flask-app du åpner i nettleseren
+Available as:
+- **CLI** (`main.py`) – tables printed straight to the terminal
+- **Website** (`app.py`) – a Flask app you open in your browser
 
-## Oppsett
+## Setup
 
-1. Lag et virtuelt miljø og installer avhengigheter:
+1. Create a virtual environment and install dependencies:
 
    ```bash
    python -m venv .venv
@@ -18,24 +18,24 @@ Tilgjengelig som:
    pip install -r requirements.txt
    ```
 
-2. Kopier `.env.example` til `.env`:
+2. Copy `.env.example` to `.env`:
 
    ```bash
    copy .env.example .env
    ```
 
-3. Fyll inn verdiene i `.env`:
+3. Fill in the values in `.env`:
 
-   - **`PL_COOKIE_HEADER`** – hele `Cookie`-headeren fra en innlogget forespørsel mot
-     `draft.premierleague.com` (fungerer også for Google/SSO-innlogging):
-     1. Logg inn på [draft.premierleague.com](https://draft.premierleague.com)
-     2. Åpne DevTools (F12) → fanen **Network**
-     3. Last siden på nytt, finn en forespørsel til `api/game` eller `api/element-status`
-     4. Under **Request Headers**, kopier hele verdien av `Cookie`
-   - **`PL_ENTRY_ID`** – lag-ID-en din, synlig i cookien som `activeEntry`, eller i URL-en på
-     "My Team"-siden.
+   - **`PL_COOKIE_HEADER`** – the full `Cookie` header from a logged-in request to
+     `draft.premierleague.com` (also works for Google/SSO logins):
+     1. Log in at [draft.premierleague.com](https://draft.premierleague.com)
+     2. Open DevTools (F12) → the **Network** tab
+     3. Reload the page, find a request to `api/game` or `api/element-status`
+     4. Under **Request Headers**, copy the entire value of `Cookie`
+   - **`PL_ENTRY_ID`** – your team ID, visible in the cookie as `activeEntry`, or in the URL on
+     the "My Team" page.
 
-## Kjøre applikasjonen
+## Running the app
 
 **CLI:**
 
@@ -43,30 +43,30 @@ Tilgjengelig som:
 python main.py
 ```
 
-**Nettside:**
+**Website:**
 
 ```bash
 python app.py
 ```
 
-Åpne deretter [http://127.0.0.1:5000](http://127.0.0.1:5000) i nettleseren.
+Then open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 
-## Hva verktøyet viser
+## What the tool shows
 
-- Anbefalt startoppstilling og benk for neste gameweek, basert på form, fixture difficulty (FDR)
-  og spilletilgjengelighet
-- Ledige spillere (free agents) verdt å hente inn
-- Forslag til bytter mellom laget ditt og ledige spillere
-- Ligaoversikt med poeng og lagoppsett for alle managere i ligaen
-- Waiver/transfer-historikk og foreslåtte trades mellom managere
-- Trade-muligheter basert på hva andre managere eier
-- Waiver-timing – din prioritet og risiko for å bli forbigått på mål du er interessert i
-- Varsel når en spiller har byttet klubb siden forrige kjøring (fanger også bytter internt i
-  Premier League, som FPL sitt API ikke flagger direkte)
+- Recommended starting lineup and bench for the next gameweek, based on form, fixture difficulty
+  (FDR), and player availability
+- Free agents worth picking up
+- Suggested transfers between your team and free agents
+- League overview with points and squads for every manager in the league
+- Waiver/transfer history and proposed trades between managers
+- Trade opportunities based on what other managers own
+- Waiver timing – your priority and the risk of being outbid on targets you're interested in
+- A notice when a player has changed clubs since the last run (this also catches moves within
+  the Premier League, which the FPL API doesn't flag directly)
 
-## Merk
+## Notes
 
-- `PL_COOKIE_HEADER` utløper med jevne mellomrom – hent en ny fra DevTools hvis du får
-  innloggingsfeil.
-- `team_change_cache.json` er en lokal cache verktøyet bruker for å oppdage klubbytter mellom
-  kjøringer. Den er ignorert av git.
+- `PL_COOKIE_HEADER` expires periodically – grab a fresh one from DevTools if you start getting
+  login errors.
+- `team_change_cache.json` is a local cache the tool uses to detect club changes between runs.
+  It's ignored by git.
