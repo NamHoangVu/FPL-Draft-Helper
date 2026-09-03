@@ -3,8 +3,23 @@ FPL Draft Analyzer
 Analyserer laget ditt og gir anbefalinger for neste gameweek.
 """
 
+import json
+import os
+import re
 from dataclasses import dataclass, field
 from typing import Optional
+
+# Fanger opp FPL sin nyhetstekst for spillere som har forlatt klubben,
+# f.eks. "Has joined Al Hilal permanently" eller "Has joined Como on loan..."
+NEW_CLUB_PATTERN = re.compile(r"[Jj]oined\s+(.+?)(?:\s+on loan|\s+permanently|\s*$)")
+
+
+def extract_new_club(news: str) -> Optional[str]:
+    """Finner navnet på ny klubb fra FPL sin news-tekst, hvis spilleren har forlatt klubben."""
+    if not news:
+        return None
+    match = NEW_CLUB_PATTERN.search(news)
+    return match.group(1) if match else None
 
 
 # Fixture Difficulty Rating: 1 = enklest, 5 = hardest
@@ -35,6 +50,7 @@ class PlayerAnalysis:
     # Status
     status: str            # 'a' = available, 'd' = doubt, 'u' = unavailable
     chance_of_playing: Optional[int]  # 0-100
+    news: str = ""         # FPL sin nyhetstekst, f.eks. skade eller klubbovergang
 
     # Score beregnet av analyzer
     recommendation_score: float = 0.0
@@ -130,7 +146,11 @@ def generate_recommendation_note(player: PlayerAnalysis) -> str:
     notes = []
 
     if player.status == "u":
-        notes.append("❌ Ikke spilleklar")
+        new_club = extract_new_club(player.news)
+        if new_club:
+            notes.append(f"❌ Ikke lenger i Premier League (har gått til {new_club})")
+        else:
+            notes.append("❌ Ikke spilleklar")
         return " | ".join(notes)
     if player.status == "d":
         notes.append(f"⚠️ Usikker ({player.chance_of_playing}%)")
@@ -229,6 +249,7 @@ def analyze_squad(
             next_is_home=is_home,
             status=p.get("status", "a"),
             chance_of_playing=p.get("chance_of_playing_this_round"),
+            news=p.get("news", ""),
         )
 
         analysis.recommendation_score = calculate_recommendation_score(analysis)
@@ -341,6 +362,7 @@ def analyze_free_agents(
             next_is_home=is_home,
             status=p.get("status", "a"),
             chance_of_playing=p.get("chance_of_playing_this_round"),
+            news=p.get("news", ""),
         )
         analysis.recommendation_score = calculate_recommendation_score(analysis)
         analysis.recommendation_note = generate_recommendation_note(analysis)
@@ -406,6 +428,7 @@ def analyze_all_owned_players(
             next_is_home=is_home,
             status=p.get("status", "a"),
             chance_of_playing=p.get("chance_of_playing_this_round"),
+            news=p.get("news", ""),
         )
         analysis.recommendation_score = calculate_recommendation_score(analysis)
         analysis.recommendation_note = generate_recommendation_note(analysis)
@@ -752,3 +775,59 @@ def build_waiver_timing_report(
         "total_entries": len(entries),
         "targets": targets,
     }
+
+
+CLUB_CHANGE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "team_change_cache.json")
+
+
+def apply_club_change_notes(
+    players: list[PlayerAnalysis],
+    current_gw: int,
+    cache_path: str = CLUB_CHANGE_CACHE_FILE,
+) -> None:
+    """
+    FPL sitt API viser bare nåværende klubb, ikke historikk. Denne funksjonen
+    lagrer hvilken klubb hver spiller hadde forrige gang verktøyet kjørte, og
+    flagger et bytte hvis klubben er annerledes nå – selv bytter *innad* i
+    Premier League (som ikke fanges opp av status/news-feltet).
+
+    Flagget ligger på notatet i hele gameweeken byttet ble oppdaget i (uansett
+    hvor mange ganger du kjører verktøyet), og forsvinner automatisk når
+    neste gameweek starter (current_gw øker).
+
+    Oppdaterer player.recommendation_note direkte (i minnet), og skriver
+    oppdatert cache til disk etterpå.
+    """
+    try:
+        with open(cache_path) as f:
+            cache: dict = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        cache = {}
+
+    for player in players:
+        key = str(player.id)
+        entry = cache.get(key, {"team": None, "prev_team": None, "flag_gw": None})
+        if isinstance(entry, str):  # migrering fra eldre cache-format
+            entry = {"team": entry, "prev_team": None, "flag_gw": None}
+
+        old_team = entry.get("team")
+        if old_team and old_team != player.team:
+            # Nytt bytte oppdaget nå – start flagget for denne gameweeken
+            entry["prev_team"] = old_team
+            entry["flag_gw"] = current_gw
+        elif entry.get("flag_gw") is not None and entry.get("flag_gw") != current_gw:
+            # Neste gameweek har startet – fjern flagget
+            entry["flag_gw"] = None
+            entry["prev_team"] = None
+
+        entry["team"] = player.team
+
+        if entry.get("flag_gw") == current_gw and entry.get("prev_team"):
+            player.recommendation_note = (
+                f"🔁 Byttet klubb (fra {entry['prev_team']} til {player.team}) | {player.recommendation_note}"
+            )
+
+        cache[key] = entry
+
+    with open(cache_path, "w") as f:
+        json.dump(cache, f, indent=2)

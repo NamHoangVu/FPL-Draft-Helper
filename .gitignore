@@ -9,5 +9,8 @@
 __pycache__/
 *.pyc
 
+# Lokal cache for å oppdage klubbytter mellom kjøringer
+team_change_cache.json
+
 # Editor/OS
 .DS_Store

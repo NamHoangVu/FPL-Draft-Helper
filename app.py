@@ -19,6 +19,7 @@ from analyzer import (
     build_trades_feed,
     find_trade_opportunities,
     build_waiver_timing_report,
+    apply_club_change_notes,
 )
 
 load_dotenv()
@@ -70,6 +71,7 @@ def index():
         fixtures = client.get_fixtures_for_gameweek(next_gw)
 
         players = analyze_squad(picks, bootstrap, next_gw, player_histories, fixtures)
+        apply_club_change_notes(players, current_gw)
         starters, bench = recommend_starting_xi(players)
 
         waiver_targets = []
@@ -83,6 +85,7 @@ def index():
             element_status = client.get_league_element_status(league_id)
             league_details = client.get_league_details(league_id)
             free_agents = analyze_free_agents(element_status, bootstrap, next_gw, fixtures)
+            apply_club_change_notes(free_agents, current_gw)
             waiver_targets = free_agents[:10]
             transfer_suggestions = suggest_transfers(players, free_agents)
             league_overview = build_league_overview(league_details, element_status, bootstrap)
@@ -92,6 +95,8 @@ def index():
             trades_feed = build_trades_feed(trades, league_details, bootstrap)
 
             owned_by_entry = analyze_all_owned_players(element_status, bootstrap, next_gw, fixtures)
+            for entry_players in owned_by_entry.values():
+                apply_club_change_notes(entry_players, current_gw)
             trade_opportunities = find_trade_opportunities(owned_by_entry, entry_id, league_details)
             waiver_timing = build_waiver_timing_report(league_details, owned_by_entry, free_agents, entry_id)
 

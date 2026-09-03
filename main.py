@@ -24,6 +24,7 @@ from analyzer import (
     build_trades_feed,
     find_trade_opportunities,
     build_waiver_timing_report,
+    apply_club_change_notes,
 )
 
 load_dotenv()
@@ -358,6 +359,7 @@ def main():
     # ── Analyser laget ────────────────────────────────────────────────────────
     with console.status("Analyserer laget..."):
         players = analyze_squad(picks, bootstrap, next_gw, player_histories, fixtures)
+        apply_club_change_notes(players, current_gw)
         starters, bench = recommend_starting_xi(players)
 
     # ── Vis resultater ────────────────────────────────────────────────────────
@@ -379,6 +381,7 @@ def main():
             console.rule("[bold magenta]Ledige spillere du kan hente[/]")
             try:
                 free_agents = analyze_free_agents(element_status, bootstrap, next_gw, fixtures)
+                apply_club_change_notes(free_agents, current_gw)
                 print_waiver_table(free_agents[:10])
             except Exception as e:
                 console.print(f"[yellow]Kunne ikke regne ut waiver-anbefalinger: {e}[/]")
@@ -404,6 +407,8 @@ def main():
             console.rule("[bold magenta]Trade-muligheter[/]")
             try:
                 owned_by_entry = analyze_all_owned_players(element_status, bootstrap, next_gw, fixtures)
+                for entry_players in owned_by_entry.values():
+                    apply_club_change_notes(entry_players, current_gw)
                 opportunities = find_trade_opportunities(owned_by_entry, entry_id, league_details)
                 print_trade_opportunities(opportunities)
             except Exception as e:
