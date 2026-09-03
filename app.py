@@ -20,6 +20,7 @@ from analyzer import (
     build_trades_feed,
     find_trade_opportunities,
     build_waiver_timing_report,
+    get_waiver_processing_info,
     apply_club_change_notes,
 )
 
@@ -93,7 +94,9 @@ def index():
         trades_feed = []
         trade_opportunities = []
         waiver_timing = None
+        waiver_processing = None
         if league_id:
+            waiver_processing = get_waiver_processing_info(bootstrap, next_gw)
             free_agents = analyze_free_agents(element_status, bootstrap, next_gw, fixtures)
             apply_club_change_notes(free_agents, current_gw)
             waiver_targets = free_agents[:10]
@@ -123,6 +126,7 @@ def index():
             "trades_feed": trades_feed,
             "trade_opportunities": trade_opportunities,
             "waiver_timing": waiver_timing,
+            "waiver_processing": waiver_processing,
         }
     except Exception as e:
         error = str(e)

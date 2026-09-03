@@ -25,6 +25,7 @@ from analyzer import (
     build_trades_feed,
     find_trade_opportunities,
     build_waiver_timing_report,
+    get_waiver_processing_info,
     apply_club_change_notes,
 )
 
@@ -387,6 +388,11 @@ def main():
         free_agents = []
         if element_status:
             console.rule("[bold magenta]Free agents you can pick up[/]")
+            waiver_processing = get_waiver_processing_info(bootstrap, next_gw)
+            if waiver_processing:
+                status = "were processed" if waiver_processing["has_passed"] else "will be processed"
+                console.print(f"[dim]⏰ Waivers for GW{waiver_processing['gameweek']} {status}: "
+                               f"{waiver_processing['label']}[/]\n")
             try:
                 free_agents = analyze_free_agents(element_status, bootstrap, next_gw, fixtures)
                 apply_club_change_notes(free_agents, current_gw)

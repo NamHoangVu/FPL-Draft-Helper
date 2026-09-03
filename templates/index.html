@@ -300,6 +300,14 @@
         </div>
 
         <div class="tab-panel" id="tab-waiver">
+            {% if waiver_processing %}
+            <p class="subtitle">
+                ⏰ Waivers for GW{{ waiver_processing.gameweek }}
+                {{ 'were processed' if waiver_processing.has_passed else 'will be processed' }}:
+                <strong>{{ waiver_processing.label }}</strong>
+            </p>
+            {% endif %}
+
             {% if waiver_targets %}
             <h2>🔄 Waiver/Free Agent recommendations</h2>
             <table>

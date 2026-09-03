@@ -7,6 +7,7 @@ import json
 import os
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Optional
 
 # Catches FPL's news text for players who have left the club,
@@ -97,6 +98,27 @@ def build_player_lookup(bootstrap: dict) -> dict:
 def build_team_lookup(bootstrap: dict) -> dict:
     """Builds a dict of team_id -> team data."""
     return {t["id"]: t for t in bootstrap["teams"]}
+
+
+def get_waiver_processing_info(bootstrap: dict, gameweek: int) -> Optional[dict]:
+    """
+    Returns when waivers for the given gameweek get processed by FPL, based on
+    bootstrap's events data (event.waivers_time). Returns None if the gameweek
+    or its waivers_time isn't found (e.g. league doesn't use waivers).
+    """
+    events = bootstrap.get("events", {}).get("data", [])
+    event = next((e for e in events if e.get("id") == gameweek), None)
+    if not event or not event.get("waivers_time"):
+        return None
+
+    waivers_time_utc = datetime.fromisoformat(event["waivers_time"].replace("Z", "+00:00"))
+    local_time = waivers_time_utc.astimezone()
+    now = datetime.now(local_time.tzinfo)
+    return {
+        "gameweek": gameweek,
+        "label": local_time.strftime("%a %d %b, %H:%M"),
+        "has_passed": local_time < now,
+    }
 
 
 def get_next_fixtures(fixtures: list, gameweek: int) -> dict:
