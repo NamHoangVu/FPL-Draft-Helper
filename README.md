@@ -1,5 +1,7 @@
 # FPL Draft Helper
 
+![Demo](demo.gif)
+
 A small tool for Fantasy Premier League **Draft** leagues. Pulls your team, free agents, and
 league data from `draft.premierleague.com`, and gives recommendations for your starting lineup,
 waiver/free agent targets, transfers, and trades.
