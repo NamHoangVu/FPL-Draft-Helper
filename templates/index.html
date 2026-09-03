@@ -260,6 +260,7 @@
 
         <div class="tabs">
             <button class="tab-btn active" data-tab="team">📋 My Team</button>
+            <button class="tab-btn" data-tab="fixtures">📅 Fixtures</button>
             <button class="tab-btn" data-tab="waiver">🔄 Waiver/Free Agent</button>
             <button class="tab-btn" data-tab="league">🏆 League Overview</button>
             <button class="tab-btn" data-tab="history">📜 Transfer History</button>
@@ -297,6 +298,21 @@
                 {% endfor %}
             </table>
             {% endif %}
+        </div>
+
+        <div class="tab-panel" id="tab-fixtures">
+            <h2>📅 GW{{ next_gw }} fixtures involving your players</h2>
+            <p class="subtitle">Kickoff times shown in Norwegian time.</p>
+            <table>
+                <tr><th>Kickoff</th><th>Match</th><th>Your players</th></tr>
+                {% for f in my_fixtures %}
+                <tr>
+                    <td>{{ f.kickoff_label }}</td>
+                    <td>{{ f.home }} v {{ f.away }}</td>
+                    <td class="note">{{ f.my_players | join(', ') }}</td>
+                </tr>
+                {% endfor %}
+            </table>
         </div>
 
         <div class="tab-panel" id="tab-waiver">

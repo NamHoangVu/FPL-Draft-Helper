@@ -26,6 +26,7 @@ from analyzer import (
     find_trade_opportunities,
     build_waiver_timing_report,
     get_waiver_processing_info,
+    build_my_fixtures,
     apply_club_change_notes,
 )
 
@@ -124,6 +125,25 @@ def print_squad_table(starters, bench):
             p.recommendation_note,
         )
     console.print(bench_table)
+
+
+def print_fixtures_table(my_fixtures):
+    if not my_fixtures:
+        console.print("[dim]No fixtures found involving your players.[/]")
+        return
+
+    table = Table(
+        title="📅 Fixtures involving your players (Norwegian time)",
+        box=box.ROUNDED,
+        header_style="bold blue",
+    )
+    table.add_column("Kickoff", min_width=18)
+    table.add_column("Match", min_width=10)
+    table.add_column("Your players", min_width=30)
+
+    for f in my_fixtures:
+        table.add_row(f["kickoff_label"], f"{f['home']} v {f['away']}", ", ".join(f["my_players"]))
+    console.print(table)
 
 
 def print_waiver_table(targets):
@@ -378,10 +398,14 @@ def main():
         players = analyze_squad(picks, bootstrap, next_gw, player_histories, fixtures)
         apply_club_change_notes(players, current_gw)
         starters, bench = recommend_starting_xi(players)
+        my_fixtures = build_my_fixtures(fixtures, next_gw, bootstrap, players)
 
     # ── Show results ─────────────────────────────────────────────────────────
     console.rule(f"[bold cyan]GW{next_gw} – Recommended lineup[/]")
     print_squad_table(starters, bench)
+
+    console.rule(f"[bold blue]GW{next_gw} – Fixtures[/]")
+    print_fixtures_table(my_fixtures)
 
     # ── Waiver recommendations and league overview ───────────────────────────
     if league_id:

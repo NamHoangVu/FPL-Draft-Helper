@@ -21,6 +21,7 @@ from analyzer import (
     find_trade_opportunities,
     build_waiver_timing_report,
     get_waiver_processing_info,
+    build_my_fixtures,
     apply_club_change_notes,
 )
 
@@ -86,6 +87,7 @@ def index():
         players = analyze_squad(picks, bootstrap, next_gw, player_histories, fixtures)
         apply_club_change_notes(players, current_gw)
         starters, bench = recommend_starting_xi(players)
+        my_fixtures = build_my_fixtures(fixtures, next_gw, bootstrap, players)
 
         waiver_targets = []
         transfer_suggestions = []
@@ -119,6 +121,7 @@ def index():
             "next_gw": next_gw,
             "starters": starters,
             "bench": bench,
+            "my_fixtures": my_fixtures,
             "waiver_targets": waiver_targets,
             "transfer_suggestions": transfer_suggestions,
             "league_squads": league_squads,

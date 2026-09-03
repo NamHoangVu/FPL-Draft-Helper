@@ -9,6 +9,9 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+NORWAY_TZ = ZoneInfo("Europe/Oslo")
 
 # Catches FPL's news text for players who have left the club,
 # e.g. "Has joined Al Hilal permanently" or "Has joined Como on loan..."
@@ -142,6 +145,44 @@ def get_next_fixtures(fixtures: list, gameweek: int) -> dict:
         fixtures_by_team.setdefault(a, []).append((h, False, a_fdr))
 
     return fixtures_by_team
+
+
+def build_my_fixtures(fixtures: list, gameweek: int, bootstrap: dict, players: list["PlayerAnalysis"]) -> list[dict]:
+    """
+    Returns the gameweek's fixtures that involve at least one team you have a
+    player in, with kickoff time converted to Norwegian time, sorted chronologically.
+    """
+    team_lookup = build_team_lookup(bootstrap)
+    my_teams = {p.team for p in players}
+
+    entries = []
+    for fixture in fixtures:
+        if fixture["event"] != gameweek:
+            continue
+        home = team_lookup.get(fixture["team_h"], {}).get("short_name", "?")
+        away = team_lookup.get(fixture["team_a"], {}).get("short_name", "?")
+        if home not in my_teams and away not in my_teams:
+            continue
+
+        kickoff = fixture.get("kickoff_time")
+        local_dt = (
+            datetime.fromisoformat(kickoff.replace("Z", "+00:00")).astimezone(NORWAY_TZ)
+            if kickoff else None
+        )
+        my_players = sorted(p.name for p in players if p.team in (home, away))
+
+        entries.append((
+            local_dt or datetime.max.replace(tzinfo=NORWAY_TZ),
+            {
+                "home": home,
+                "away": away,
+                "kickoff_label": local_dt.strftime("%a %d %b, %H:%M") if local_dt else "TBC",
+                "my_players": my_players,
+            },
+        ))
+
+    entries.sort(key=lambda e: e[0])
+    return [entry for _, entry in entries]
 
 
 def calculate_recommendation_score(player: PlayerAnalysis) -> float:
