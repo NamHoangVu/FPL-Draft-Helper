@@ -141,7 +141,17 @@ def index():
         players = analyze_squad(picks, bootstrap, next_gw, player_histories, fixtures)
         apply_club_change_notes(players, current_gw)
         starters, bench = recommend_starting_xi(players)
-        my_fixtures = build_my_fixtures(fixtures, next_gw, bootstrap, players)
+
+        # While the current gameweek is still being played, show its remaining
+        # fixtures (not next_gw's) - e.g. don't jump ahead to next week's
+        # fixtures while today's matches haven't been played yet.
+        if current_gw_label == "Current GW":
+            fixtures_gw = current_gw
+            fixtures_for_tab = client.get_fixtures_for_gameweek(current_gw)
+        else:
+            fixtures_gw = next_gw
+            fixtures_for_tab = fixtures
+        my_fixtures = build_my_fixtures(fixtures_for_tab, fixtures_gw, bootstrap, players)
 
         waiver_targets = []
         transfer_suggestions = []
@@ -177,6 +187,7 @@ def index():
             "starters": starters,
             "bench": bench,
             "my_fixtures": my_fixtures,
+            "my_fixtures_gw": fixtures_gw,
             "waiver_targets": waiver_targets,
             "transfer_suggestions": transfer_suggestions,
             "league_squads": league_squads,

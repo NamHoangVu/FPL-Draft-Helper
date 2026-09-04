@@ -171,7 +171,7 @@ def build_my_fixtures(fixtures: list, gameweek: int, bootstrap: dict, players: l
 
     entries = []
     for fixture in fixtures:
-        if fixture["event"] != gameweek:
+        if fixture["event"] != gameweek or fixture.get("finished"):
             continue
         home = team_lookup.get(fixture["team_h"], {}).get("short_name", "?")
         away = team_lookup.get(fixture["team_a"], {}).get("short_name", "?")
