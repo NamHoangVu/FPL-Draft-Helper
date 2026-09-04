@@ -293,6 +293,13 @@ def analyze_squad(
     # FPL position codes: 1=GKP, 2=DEF, 3=MID, 4=FWD
     pos_map = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
 
+    # While a gameweek is still in progress, FPL already adds a placeholder
+    # history entry for it (0 minutes) for any player whose match hasn't
+    # kicked off yet. Use the last *completed* gameweek instead, so those
+    # players don't wrongly show as "didn't play last GW".
+    current_gw = next_gw - 1
+    last_completed_gw = current_gw if is_gameweek_finished(bootstrap, current_gw) else current_gw - 1
+
     results = []
     for pick in picks["picks"]:
         pid = pick["element"]
@@ -311,14 +318,14 @@ def analyze_squad(
         else:
             opp_name, is_home, fdr = "Blank", False, 3
 
-        # History: get form and last match
+        # History: get form and the last completed match
         history = player_histories.get(pid, {})
         past_matches = history.get("history", [])
 
         points_last_gw = 0
         minutes_last_gw = 0
-        if past_matches:
-            last = past_matches[-1]
+        last = next((m for m in reversed(past_matches) if m.get("event", 0) <= last_completed_gw), None)
+        if last:
             points_last_gw = last.get("total_points", 0)
             minutes_last_gw = last.get("minutes", 0)
 
