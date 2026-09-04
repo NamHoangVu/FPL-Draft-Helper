@@ -27,6 +27,7 @@ from analyzer import (
     build_waiver_timing_report,
     get_waiver_processing_info,
     build_my_fixtures,
+    is_gameweek_finished,
     apply_club_change_notes,
 )
 
@@ -110,6 +111,7 @@ def index():
 
         current_gw = client.get_current_gameweek()
         next_gw = current_gw + 1
+        current_gw_label = "Last GW" if is_gameweek_finished(bootstrap, current_gw) else "Current GW"
 
         # element-status shows ownership in real time, unlike get_my_picks() which
         # only has data for gameweeks that have already locked/started. Use it for
@@ -170,6 +172,7 @@ def index():
         context = {
             "team_name": team_name,
             "current_gw": current_gw,
+            "current_gw_label": current_gw_label,
             "next_gw": next_gw,
             "starters": starters,
             "bench": bench,

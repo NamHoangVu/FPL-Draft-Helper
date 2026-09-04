@@ -125,6 +125,19 @@ def get_waiver_processing_info(bootstrap: dict, gameweek: int) -> Optional[dict]
     }
 
 
+def is_gameweek_finished(bootstrap: dict, gameweek: int) -> bool:
+    """
+    Whether the given gameweek's matches have all finished, per bootstrap's events data.
+
+    get_current_gameweek() returns the gameweek as soon as its deadline passes and
+    squads lock - not once it's actually been played - so this is needed to tell
+    a genuinely finished gameweek apart from one that's still live or upcoming.
+    """
+    events = bootstrap.get("events", {}).get("data", [])
+    event = next((e for e in events if e.get("id") == gameweek), None)
+    return bool(event and event.get("finished"))
+
+
 def get_next_fixtures(fixtures: list, gameweek: int) -> dict:
     """
     Returns a dict: team_id -> list of (opponent_team_id, is_home, fdr)

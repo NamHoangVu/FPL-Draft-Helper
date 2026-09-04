@@ -26,6 +26,7 @@ from analyzer import (
     find_trade_opportunities,
     build_waiver_timing_report,
     get_waiver_processing_info,
+    is_gameweek_finished,
     build_my_fixtures,
     apply_club_change_notes,
 )
@@ -357,8 +358,9 @@ def main():
     with console.status("Fetching gameweek info..."):
         current_gw = client.get_current_gameweek()
         next_gw = current_gw + 1
+        current_gw_label = "Last GW" if is_gameweek_finished(bootstrap, current_gw) else "Current GW"
 
-    console.print(f"\n[bold]Team:[/] {team_name}  |  [bold]Last GW:[/] {current_gw}  |  [bold]Next GW:[/] {next_gw}\n")
+    console.print(f"\n[bold]Team:[/] {team_name}  |  [bold]{current_gw_label}:[/] {current_gw}  |  [bold]Next GW:[/] {next_gw}\n")
 
     # ── Fetch league data and picks ──────────────────────────────────────────
     # element-status shows ownership in real time, unlike get_my_picks() which

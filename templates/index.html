@@ -247,7 +247,7 @@
         <div class="error"><strong>Error:</strong> {{ error }}</div>
     {% else %}
         <div class="subtitle">
-            {{ team_name }} · Last GW: {{ current_gw }} · Next GW: {{ next_gw }}
+            {{ team_name }} · {{ current_gw_label }}: {{ current_gw }} · Next GW: {{ next_gw }}
         </div>
 
         {% macro player_card(p) %}
