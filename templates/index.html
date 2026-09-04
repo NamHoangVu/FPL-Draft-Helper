@@ -221,7 +221,10 @@
 </style>
 </head>
 <body>
-    <h1>🏆 FPL Draft Helper</h1>
+    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h1>🏆 FPL Draft Helper</h1>
+        <a href="{{ url_for('logout') }}" style="color: var(--muted); font-size: 13px;">Log out</a>
+    </div>
 
     {% if error %}
         <div class="error"><strong>Error:</strong> {{ error }}</div>

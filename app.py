@@ -4,8 +4,13 @@ Run: python app.py, open http://127.0.0.1:5000
 """
 
 import os
+import secrets
+from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
+from functools import wraps
+
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for, session
 
 from api import FPLDraftClient
 from analyzer import (
@@ -28,6 +33,13 @@ from analyzer import (
 load_dotenv()
 app = Flask(__name__)
 
+app.secret_key = os.environ.get("SECRET_KEY")
+app.permanent_session_lifetime = timedelta(days=30)
+# Vercel sets VERCEL=1 in its build/runtime environment - only require HTTPS
+# cookies there, so the session cookie still works over plain http://localhost.
+app.config["SESSION_COOKIE_SECURE"] = bool(os.environ.get("VERCEL"))
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
 FDR_CLASS = {1: "fdr-1", 2: "fdr-2", 3: "fdr-3", 4: "fdr-4", 5: "fdr-5"}
 
 
@@ -45,7 +57,44 @@ def get_entry_id() -> int:
     return int(entry_id)
 
 
+@app.before_request
+def check_auth_config():
+    if not app.secret_key or not os.environ.get("APP_PASSWORD"):
+        return "Server misconfigured: SECRET_KEY and APP_PASSWORD must both be set.", 500
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("authenticated"):
+            return redirect(url_for("login", next=request.path))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        expected = os.environ.get("APP_PASSWORD")
+        submitted = request.form.get("password", "")
+        if expected and secrets.compare_digest(submitted, expected):
+            session.clear()
+            session["authenticated"] = True
+            session.permanent = True
+            return redirect(request.args.get("next") or url_for("index"))
+        error = "Wrong password."
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
 @app.route("/")
+@login_required
 def index():
     error = None
     context = {}
@@ -75,12 +124,15 @@ def index():
         else:
             picks = client.get_my_picks(entry_id, current_gw)
         player_ids = [p["element"] for p in picks["picks"]]
-        player_histories = {}
-        for pid in player_ids:
+
+        def fetch_history(pid):
             try:
-                player_histories[pid] = client.get_player_history(pid)
+                return pid, client.get_player_history(pid)
             except Exception:
-                player_histories[pid] = {}
+                return pid, {}
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            player_histories = dict(executor.map(fetch_history, player_ids))
 
         fixtures = client.get_fixtures_for_gameweek(next_gw)
 

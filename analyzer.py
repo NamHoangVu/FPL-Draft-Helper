@@ -6,6 +6,7 @@ Analyzes your squad and gives recommendations for the next gameweek.
 import json
 import os
 import re
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -883,7 +884,13 @@ def build_waiver_timing_report(
     }
 
 
-CLUB_CHANGE_CACHE_FILE = os.path.join(os.path.dirname(__file__), "team_change_cache.json")
+# On Vercel the deployed code lives on a read-only filesystem - only /tmp is
+# writable, and even that isn't guaranteed to persist between invocations.
+CLUB_CHANGE_CACHE_FILE = (
+    os.path.join(tempfile.gettempdir(), "fpl_team_change_cache.json")
+    if os.environ.get("VERCEL")
+    else os.path.join(os.path.dirname(__file__), "team_change_cache.json")
+)
 
 
 def apply_club_change_notes(
@@ -935,5 +942,8 @@ def apply_club_change_notes(
 
         cache[key] = entry
 
-    with open(cache_path, "w") as f:
-        json.dump(cache, f, indent=2)
+    try:
+        with open(cache_path, "w") as f:
+            json.dump(cache, f, indent=2)
+    except OSError:
+        pass  # read-only filesystem - club-change detection just won't persist between runs
