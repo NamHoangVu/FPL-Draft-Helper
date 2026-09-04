@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FPL Draft Helper</title>
 <style>
     :root {
@@ -203,6 +204,8 @@
         gap: 4px;
         border-bottom: 1px solid var(--border);
         margin-bottom: 24px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .tab-btn {
         background: none;
@@ -213,11 +216,25 @@
         padding: 10px 16px;
         cursor: pointer;
         border-bottom: 2px solid transparent;
+        flex-shrink: 0;
+        white-space: nowrap;
     }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active { color: var(--text); border-bottom-color: var(--blue); }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+
+    @media (max-width: 600px) {
+        body { padding: 16px; overflow-x: hidden; }
+        h1 { font-size: 20px; }
+        h2 { font-size: 17px; overflow-wrap: break-word; }
+        table { display: block; overflow-x: auto; white-space: nowrap; }
+        .player-card { width: 72px; }
+        .player-shirt { width: 34px; height: 34px; font-size: 11px; }
+        .player-name-pill { font-size: 11px; max-width: 78px; }
+        .pitch-row { gap: 10px; }
+        .pitch { padding: 20px 10px 44px; }
+    }
 </style>
 </head>
 <body>
