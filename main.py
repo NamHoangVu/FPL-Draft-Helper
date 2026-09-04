@@ -12,7 +12,7 @@ from rich import box
 from rich.panel import Panel
 from rich.text import Text
 
-from api import FPLDraftClient
+from fpl_client import FPLDraftClient
 from analyzer import (
     build_current_squad_picks,
     analyze_squad,

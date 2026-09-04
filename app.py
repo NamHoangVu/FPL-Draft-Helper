@@ -12,7 +12,7 @@ from functools import wraps
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session
 
-from api import FPLDraftClient
+from fpl_client import FPLDraftClient
 from analyzer import (
     build_current_squad_picks,
     analyze_squad,
