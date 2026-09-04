@@ -27,7 +27,9 @@ class FPLDraftClient:
         """
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
-        self.session.headers["Cookie"] = raw_cookie_header
+        # .strip() guards against a stray trailing newline from copy-pasting the
+        # cookie value (e.g. into an env var field) - HTTP headers can't contain one.
+        self.session.headers["Cookie"] = raw_cookie_header.strip()
         self._bootstrap = None
 
     # ── Bootstrap (all player/team/fixture data) ──────────────────────────────
