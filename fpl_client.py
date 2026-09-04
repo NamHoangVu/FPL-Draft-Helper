@@ -58,7 +58,10 @@ class FPLDraftClient:
         fixtures with FDR from the public classic FPL API instead.
         The team IDs are the same in both APIs.
         """
-        r = requests.get(f"{CLASSIC_BASE_URL}/fixtures/", params={"event": gameweek})
+        # Uses self.session (not a bare requests.get) so this carries the same
+        # browser-like headers as the rest of the client - without them, Cloudflare
+        # is more likely to reject the request as a bot (seen from cloud IPs like Vercel's).
+        r = self.session.get(f"{CLASSIC_BASE_URL}/fixtures/", params={"event": gameweek})
         r.raise_for_status()
         return r.json()
 
