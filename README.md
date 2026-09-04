@@ -1,6 +1,7 @@
 # FPL Draft Helper
 
-![Demo](demo.gif)
+![My Team](screenshot-team.png)
+![Waiver/Free Agent](screenshot-waiver.png)
 
 A small tool for Fantasy Premier League **Draft** leagues. Pulls your team, free agents, and
 league data from `draft.premierleague.com`, and gives recommendations for your starting lineup,
@@ -27,38 +28,23 @@ what's deployed above).
 
 ## Local development
 
-1. Create a virtual environment and install dependencies:
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env      # then fill in PL_COOKIE_HEADER, PL_ENTRY_ID, APP_PASSWORD, SECRET_KEY
 
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate      # Windows
-   pip install -r requirements.txt
-   ```
+python main.py               # CLI
+python app.py                # website → http://127.0.0.1:5000
+```
 
-2. Copy `.env.example` to `.env` and fill in the values:
+`PL_COOKIE_HEADER`: log in at [draft.premierleague.com](https://draft.premierleague.com), open
+DevTools → Network, reload, and copy the `Cookie` header from a request to `api/game`.
+`PL_ENTRY_ID`: your team ID (the `activeEntry` cookie value, or in the "My Team" URL).
+`SECRET_KEY`: any random string, e.g. `python -c "import secrets; print(secrets.token_hex(32))"`.
 
-   - **`PL_COOKIE_HEADER`** – the full `Cookie` header from a logged-in request to
-     `draft.premierleague.com` (also works for Google/SSO logins). Log in at
-     [draft.premierleague.com](https://draft.premierleague.com), open DevTools (F12) → **Network**,
-     reload, find a request to `api/game` or `api/element-status`, and copy the entire
-     `Cookie` request header.
-   - **`PL_ENTRY_ID`** – your team ID, visible in the cookie as `activeEntry`, or in the URL on
-     the "My Team" page.
-   - **`APP_PASSWORD`** – login password for the website (`app.py` only, not used by the CLI).
-   - **`SECRET_KEY`** – random value signing the login session cookie, e.g. from
-     `python -c "import secrets; print(secrets.token_hex(32))"`. Keep it stable, or you'll get
-     logged out whenever it changes.
-
-3. Run it:
-
-   ```bash
-   python main.py      # CLI
-   python app.py        # website → http://127.0.0.1:5000
-   ```
-
-   **Windows app-control policies** (e.g. Smart App Control) sometimes block the python.exe that
-   `venv` copies into `.venv\Scripts`. If you hit that, use `.\run.ps1` / `.\run.ps1 app` instead –
-   it runs your global Python with the venv's packages on `PYTHONPATH`.
+If Windows blocks `.venv\Scripts\python.exe` from running (a Smart App Control / app-control
+policy), use `.\run.ps1` / `.\run.ps1 app` instead.
 
 ## Deploying (Vercel)
 
