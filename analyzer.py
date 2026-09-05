@@ -212,7 +212,7 @@ def build_my_fixtures(
                 pts = match.get("total_points", 0) if match else 0
                 details.append(f"{pts} pts")
             if p.id in bench_ids:
-                details.append("bench")
+                details.append("🪑")
             label = f"{p.name} ({', '.join(details)})" if details else p.name
             my_players.append(label)
         my_players.sort()
