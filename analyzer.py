@@ -167,6 +167,7 @@ def build_my_fixtures(
     bootstrap: dict,
     players: list["PlayerAnalysis"],
     player_histories: Optional[dict] = None,
+    bench_ids: Optional[set] = None,
 ) -> list[dict]:
     """
     Returns the gameweek's fixtures that involve at least one team you have a
@@ -174,11 +175,13 @@ def build_my_fixtures(
 
     Once a fixture has been played, it's flagged as finished and each of your
     players' points in that match are looked up from player_histories (dict of
-    player_id -> get_player_history()).
+    player_id -> get_player_history()). bench_ids flags players who were on
+    your FPL Draft bench (not the real-life match squad) for this gameweek.
     """
     team_lookup = build_team_lookup(bootstrap)
     my_teams = {p.team for p in players}
     player_histories = player_histories or {}
+    bench_ids = bench_ids or set()
 
     entries = []
     for fixture in fixtures:
@@ -202,15 +205,16 @@ def build_my_fixtures(
         for p in players:
             if p.team not in (home, away):
                 continue
+            details = []
             if played:
                 history = player_histories.get(p.id, {}).get("history", [])
                 match = next((h for h in history if h.get("event") == gameweek), None)
-                minutes = match.get("minutes", 0) if match else 0
                 pts = match.get("total_points", 0) if match else 0
-                suffix = f"{pts} pts, bench" if minutes == 0 else f"{pts} pts"
-                my_players.append(f"{p.name} ({suffix})")
-            else:
-                my_players.append(p.name)
+                details.append(f"{pts} pts")
+            if p.id in bench_ids:
+                details.append("bench")
+            label = f"{p.name} ({', '.join(details)})" if details else p.name
+            my_players.append(label)
         my_players.sort()
 
         entries.append((

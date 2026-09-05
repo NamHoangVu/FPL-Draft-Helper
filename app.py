@@ -148,10 +148,15 @@ def index():
         if current_gw_label == "Current GW":
             fixtures_gw = current_gw
             fixtures_for_tab = client.get_fixtures_for_gameweek(current_gw)
+            # current_gw is already locked, so get_my_picks has the bench
+            # arrangement you actually set for it - not just our recommendation.
+            locked_picks = client.get_my_picks(entry_id, current_gw)
+            bench_ids = {p["element"] for p in locked_picks["picks"] if p["position"] > 11}
         else:
             fixtures_gw = next_gw
             fixtures_for_tab = fixtures
-        my_fixtures = build_my_fixtures(fixtures_for_tab, fixtures_gw, bootstrap, players, player_histories)
+            bench_ids = {p.id for p in bench}
+        my_fixtures = build_my_fixtures(fixtures_for_tab, fixtures_gw, bootstrap, players, player_histories, bench_ids)
 
         waiver_targets = []
         transfer_suggestions = []
