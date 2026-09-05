@@ -143,7 +143,8 @@ def print_fixtures_table(my_fixtures):
     table.add_column("Your players", min_width=30)
 
     for f in my_fixtures:
-        table.add_row(f["kickoff_label"], f"{f['home']} v {f['away']}", ", ".join(f["my_players"]))
+        kickoff = f"✅ {f['kickoff_label']}" if f["played"] else f["kickoff_label"]
+        table.add_row(kickoff, f"{f['home']} v {f['away']}", ", ".join(f["my_players"]))
     console.print(table)
 
 
@@ -410,7 +411,7 @@ def main():
         else:
             fixtures_gw = next_gw
             fixtures_for_tab = fixtures
-        my_fixtures = build_my_fixtures(fixtures_for_tab, fixtures_gw, bootstrap, players)
+        my_fixtures = build_my_fixtures(fixtures_for_tab, fixtures_gw, bootstrap, players, player_histories)
 
     # ── Show results ─────────────────────────────────────────────────────────
     console.rule(f"[bold cyan]GW{next_gw} – Recommended lineup[/]")

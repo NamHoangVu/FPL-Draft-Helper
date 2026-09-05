@@ -161,17 +161,28 @@ def get_next_fixtures(fixtures: list, gameweek: int) -> dict:
     return fixtures_by_team
 
 
-def build_my_fixtures(fixtures: list, gameweek: int, bootstrap: dict, players: list["PlayerAnalysis"]) -> list[dict]:
+def build_my_fixtures(
+    fixtures: list,
+    gameweek: int,
+    bootstrap: dict,
+    players: list["PlayerAnalysis"],
+    player_histories: Optional[dict] = None,
+) -> list[dict]:
     """
     Returns the gameweek's fixtures that involve at least one team you have a
     player in, with kickoff time converted to Norwegian time, sorted chronologically.
+
+    Once a fixture has been played, it's flagged as finished and each of your
+    players' points in that match are looked up from player_histories (dict of
+    player_id -> get_player_history()).
     """
     team_lookup = build_team_lookup(bootstrap)
     my_teams = {p.team for p in players}
+    player_histories = player_histories or {}
 
     entries = []
     for fixture in fixtures:
-        if fixture["event"] != gameweek or fixture.get("finished"):
+        if fixture["event"] != gameweek:
             continue
         home = team_lookup.get(fixture["team_h"], {}).get("short_name", "?")
         away = team_lookup.get(fixture["team_a"], {}).get("short_name", "?")
@@ -183,7 +194,22 @@ def build_my_fixtures(fixtures: list, gameweek: int, bootstrap: dict, players: l
             datetime.fromisoformat(kickoff.replace("Z", "+00:00")).astimezone(NORWAY_TZ)
             if kickoff else None
         )
-        my_players = sorted(p.name for p in players if p.team in (home, away))
+        # finished_provisional flips true right after full-time - finished only
+        # once bonus points are confirmed, which can lag by up to an hour.
+        played = bool(fixture.get("finished_provisional"))
+
+        my_players = []
+        for p in players:
+            if p.team not in (home, away):
+                continue
+            if played:
+                history = player_histories.get(p.id, {}).get("history", [])
+                match = next((h for h in history if h.get("event") == gameweek), None)
+                pts = match.get("total_points", 0) if match else 0
+                my_players.append(f"{p.name} ({pts} pts)")
+            else:
+                my_players.append(p.name)
+        my_players.sort()
 
         entries.append((
             local_dt or datetime.max.replace(tzinfo=NORWAY_TZ),
@@ -191,6 +217,7 @@ def build_my_fixtures(fixtures: list, gameweek: int, bootstrap: dict, players: l
                 "home": home,
                 "away": away,
                 "kickoff_label": local_dt.strftime("%a %d %b, %H:%M") if local_dt else "TBC",
+                "played": played,
                 "my_players": my_players,
             },
         ))

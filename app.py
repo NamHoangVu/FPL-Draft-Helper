@@ -151,7 +151,7 @@ def index():
         else:
             fixtures_gw = next_gw
             fixtures_for_tab = fixtures
-        my_fixtures = build_my_fixtures(fixtures_for_tab, fixtures_gw, bootstrap, players)
+        my_fixtures = build_my_fixtures(fixtures_for_tab, fixtures_gw, bootstrap, players, player_histories)
 
         waiver_targets = []
         transfer_suggestions = []

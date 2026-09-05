@@ -327,7 +327,7 @@
                 <tr><th>Kickoff</th><th>Match</th><th>Your players</th></tr>
                 {% for f in my_fixtures %}
                 <tr>
-                    <td>{{ f.kickoff_label }}</td>
+                    <td>{% if f.played %}✅ {% endif %}{{ f.kickoff_label }}</td>
                     <td>{{ f.home }} v {{ f.away }}</td>
                     <td class="note">{{ f.my_players | join(', ') }}</td>
                 </tr>
