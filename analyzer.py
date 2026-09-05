@@ -205,8 +205,10 @@ def build_my_fixtures(
             if played:
                 history = player_histories.get(p.id, {}).get("history", [])
                 match = next((h for h in history if h.get("event") == gameweek), None)
+                minutes = match.get("minutes", 0) if match else 0
                 pts = match.get("total_points", 0) if match else 0
-                my_players.append(f"{p.name} ({pts} pts)")
+                suffix = f"{pts} pts, bench" if minutes == 0 else f"{pts} pts"
+                my_players.append(f"{p.name} ({suffix})")
             else:
                 my_players.append(p.name)
         my_players.sort()
