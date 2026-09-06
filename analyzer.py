@@ -678,7 +678,8 @@ def build_league_squads(
     league_details: dict,
     owned_by_entry: dict,
     picks_by_entry: dict,
-    live_points: Optional[dict] = None,
+    gameweek: Optional[int] = None,
+    player_histories: Optional[dict] = None,
 ) -> list[dict]:
     """
     Like build_league_overview, but returns each manager's actual starting lineup
@@ -686,7 +687,7 @@ def build_league_squads(
     recommendation - so their team can be shown as a real formation.
 
     picks_by_entry: dict of entry_id -> get_my_picks() result for that gameweek.
-    live_points: optional dict from FPLDraftClient.get_live_gameweek_points(), used to
+    player_histories: optional dict of player_id -> get_player_history(), used to
     compute event points ourselves instead of trusting standings' event_total, which
     FPL only updates periodically and can lag well behind live scores mid-gameweek.
     """
@@ -705,12 +706,8 @@ def build_league_squads(
         ]
 
         event_points = standing["event_total"]
-        if live_points and picks:
-            event_points = sum(
-                live_points.get(pick["element"], {}).get("points", 0) * pick.get("multiplier", 1)
-                for pick in picks
-                if pick["position"] <= 11
-            )
+        if player_histories and picks and gameweek is not None:
+            event_points = compute_live_event_points(picks, gameweek, player_histories)
 
         overview.append({
             "rank": standing["rank"],
@@ -975,19 +972,40 @@ CLUB_CHANGE_CACHE_FILE = (
 )
 
 
-def apply_live_points(players: list[PlayerAnalysis], live_points: dict) -> None:
+def apply_live_points(players: list[PlayerAnalysis], gameweek: int, player_histories: dict) -> None:
     """
-    Sets player.live_points_label from live_points (player_id -> {"points",
-    "minutes"}, from FPLDraftClient.get_live_gameweek_points()). Players who
-    haven't played yet (0 minutes, or missing entirely for a gameweek that
-    hasn't started) are labeled "N/A" rather than a misleading "0 pts".
+    Sets player.live_points_label from each player's own history entry for the
+    given gameweek (player_histories: player_id -> get_player_history(), from
+    the Draft API - NOT the classic API's /event/{gw}/live/, which numbers
+    players completely differently and would silently attribute points to the
+    wrong people). Players who haven't played yet (0 minutes, or no entry for
+    this gameweek at all) are labeled "N/A" rather than a misleading "0 pts".
     """
     for player in players:
-        stats = live_points.get(player.id)
-        if stats and stats["minutes"] > 0:
-            player.live_points_label = f"{stats['points']} pts"
+        history = player_histories.get(player.id, {}).get("history", [])
+        match = next((h for h in history if h.get("event") == gameweek), None)
+        if match and match.get("minutes", 0) > 0:
+            player.live_points_label = f"{match.get('total_points', 0)} pts"
         else:
             player.live_points_label = "N/A"
+
+
+def compute_live_event_points(picks: list, gameweek: int, player_histories: dict) -> int:
+    """
+    Sums a manager's starters' points for the given gameweek (with the
+    captain multiplier applied), from each player's own history entry -
+    see apply_live_points() for why this must use the Draft API, not the
+    classic API's /event/{gw}/live/.
+    """
+    total = 0
+    for pick in picks:
+        if pick["position"] > 11:
+            continue
+        history = player_histories.get(pick["element"], {}).get("history", [])
+        match = next((h for h in history if h.get("event") == gameweek), None)
+        pts = match.get("total_points", 0) if match else 0
+        total += pts * pick.get("multiplier", 1)
+    return total
 
 
 def apply_club_change_notes(

@@ -197,10 +197,31 @@ def index():
             with ThreadPoolExecutor(max_workers=8) as executor:
                 picks_by_entry = dict(executor.map(fetch_picks, other_entry_ids))
 
-            live_points = client.get_live_gameweek_points(current_gw)
-            league_squads = build_league_squads(league_details, owned_by_entry, picks_by_entry, live_points)
+            # Points must come from the Draft API's per-player history, not the
+            # classic API's /event/{gw}/live/ - the two APIs number players
+            # completely differently, so joining against that would silently
+            # attribute points to the wrong people.
+            starter_ids = {
+                pick["element"]
+                for picks in picks_by_entry.values()
+                for pick in picks.get("picks", [])
+                if pick["position"] <= 11
+            }
+
+            def fetch_starter_history(pid):
+                try:
+                    return pid, client.get_player_history(pid)
+                except Exception:
+                    return pid, {}
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                league_player_histories = dict(executor.map(fetch_starter_history, starter_ids))
+
+            league_squads = build_league_squads(
+                league_details, owned_by_entry, picks_by_entry, current_gw, league_player_histories
+            )
             for entry in league_squads:
-                apply_live_points(entry["starters"], live_points)
+                apply_live_points(entry["starters"], current_gw, league_player_histories)
 
         context = {
             "team_name": team_name,
