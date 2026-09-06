@@ -196,9 +196,9 @@ def index():
 
             with ThreadPoolExecutor(max_workers=8) as executor:
                 picks_by_entry = dict(executor.map(fetch_picks, other_entry_ids))
-            league_squads = build_league_squads(league_details, owned_by_entry, picks_by_entry)
 
             live_points = client.get_live_gameweek_points(current_gw)
+            league_squads = build_league_squads(league_details, owned_by_entry, picks_by_entry, live_points)
             for entry in league_squads:
                 apply_live_points(entry["starters"], live_points)
 

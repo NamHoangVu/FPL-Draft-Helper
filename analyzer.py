@@ -674,13 +674,21 @@ def build_league_overview(league_details: dict, league_element_status: dict, boo
     return overview
 
 
-def build_league_squads(league_details: dict, owned_by_entry: dict, picks_by_entry: dict) -> list[dict]:
+def build_league_squads(
+    league_details: dict,
+    owned_by_entry: dict,
+    picks_by_entry: dict,
+    live_points: Optional[dict] = None,
+) -> list[dict]:
     """
     Like build_league_overview, but returns each manager's actual starting lineup
     for the (locked) gameweek picks_by_entry was fetched for - not our own
     recommendation - so their team can be shown as a real formation.
 
     picks_by_entry: dict of entry_id -> get_my_picks() result for that gameweek.
+    live_points: optional dict from FPLDraftClient.get_live_gameweek_points(), used to
+    compute event points ourselves instead of trusting standings' event_total, which
+    FPL only updates periodically and can lag well behind live scores mid-gameweek.
     """
     entries_by_id = {e["id"]: e for e in league_details.get("league_entries", [])}
 
@@ -695,12 +703,21 @@ def build_league_squads(league_details: dict, owned_by_entry: dict, picks_by_ent
             for pick in picks
             if pick["position"] <= 11 and pick["element"] in players_by_id
         ]
+
+        event_points = standing["event_total"]
+        if live_points and picks:
+            event_points = sum(
+                live_points.get(pick["element"], {}).get("points", 0) * pick.get("multiplier", 1)
+                for pick in picks
+                if pick["position"] <= 11
+            )
+
         overview.append({
             "rank": standing["rank"],
             "team_name": entry.get("entry_name", "?"),
             "manager": f"{entry.get('player_first_name', '')} {entry.get('player_last_name', '')}".strip(),
             "total_points": standing["total"],
-            "event_points": standing["event_total"],
+            "event_points": event_points,
             "starters": starters,
         })
 
