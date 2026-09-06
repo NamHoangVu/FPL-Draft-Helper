@@ -148,6 +148,17 @@
         width: 92px;
         text-align: center;
     }
+    .player-points-pill {
+        background: rgba(255,255,255,0.9);
+        color: #0f1420;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 4px;
+        margin-bottom: 3px;
+        white-space: nowrap;
+    }
+    .player-points-pill.na { color: var(--muted); font-weight: 600; }
     .player-shirt {
         width: 40px;
         height: 40px;
@@ -252,6 +263,9 @@
 
         {% macro player_card(p) %}
         <div class="player-card">
+            {% if p.live_points_label %}
+            <div class="player-points-pill{{ ' na' if p.live_points_label == 'N/A' else '' }}">{{ p.live_points_label }}</div>
+            {% endif %}
             <div class="player-shirt {{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}"
                  title="{{ p.name }} · {{ p.form }} form · score {{ p.recommendation_score }}{% if p.recommendation_note %} · {{ p.recommendation_note }}{% endif %}">
                 {{ p.team }}

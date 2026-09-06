@@ -65,6 +65,21 @@ class FPLDraftClient:
         r.raise_for_status()
         return r.json()
 
+    def get_live_gameweek_points(self, gameweek: int) -> dict:
+        """
+        Fetches live points/minutes for every player in a gameweek in a single
+        request (classic FPL API), instead of one element-summary call per player.
+        Returns a dict of player_id -> {"points": int, "minutes": int}. Empty for
+        a gameweek that hasn't started yet.
+        """
+        r = self.session.get(f"{CLASSIC_BASE_URL}/event/{gameweek}/live/")
+        r.raise_for_status()
+        data = r.json()
+        return {
+            el["id"]: {"points": el["stats"]["total_points"], "minutes": el["stats"]["minutes"]}
+            for el in data.get("elements", [])
+        }
+
     # ── User and team ────────────────────────────────────────────────────────
 
     def get_my_picks(self, entry_id: int, gameweek: int) -> dict:

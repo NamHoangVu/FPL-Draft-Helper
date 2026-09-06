@@ -28,6 +28,7 @@ from analyzer import (
     get_waiver_processing_info,
     build_my_fixtures,
     is_gameweek_finished,
+    apply_live_points,
     apply_club_change_notes,
 )
 
@@ -196,6 +197,10 @@ def index():
             with ThreadPoolExecutor(max_workers=8) as executor:
                 picks_by_entry = dict(executor.map(fetch_picks, other_entry_ids))
             league_squads = build_league_squads(league_details, owned_by_entry, picks_by_entry)
+
+            live_points = client.get_live_gameweek_points(current_gw)
+            for entry in league_squads:
+                apply_live_points(entry["starters"], live_points)
 
         context = {
             "team_name": team_name,

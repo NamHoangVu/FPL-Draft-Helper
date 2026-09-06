@@ -61,6 +61,10 @@ class PlayerAnalysis:
     recommendation_score: float = 0.0
     recommendation_note: str = ""
 
+    # Live points for whichever gameweek is being displayed, e.g. "8 pts" or
+    # "N/A" if that gameweek hasn't been played yet. Set by apply_live_points().
+    live_points_label: Optional[str] = None
+
     @property
     def fixture_label(self) -> str:
         home_away = "H" if self.next_is_home else "A"
@@ -952,6 +956,21 @@ CLUB_CHANGE_CACHE_FILE = (
     if os.environ.get("VERCEL")
     else os.path.join(os.path.dirname(__file__), "team_change_cache.json")
 )
+
+
+def apply_live_points(players: list[PlayerAnalysis], live_points: dict) -> None:
+    """
+    Sets player.live_points_label from live_points (player_id -> {"points",
+    "minutes"}, from FPLDraftClient.get_live_gameweek_points()). Players who
+    haven't played yet (0 minutes, or missing entirely for a gameweek that
+    hasn't started) are labeled "N/A" rather than a misleading "0 pts".
+    """
+    for player in players:
+        stats = live_points.get(player.id)
+        if stats and stats["minutes"] > 0:
+            player.live_points_label = f"{stats['points']} pts"
+        else:
+            player.live_points_label = "N/A"
 
 
 def apply_club_change_notes(
