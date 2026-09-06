@@ -313,9 +313,7 @@
                     <td>{{ p.name }}</td>
                     <td>{{ p.team }}</td>
                     <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
-                    <td class="{{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}">
-                        {{ p.recommendation_score }}
-                    </td>
+                    <td class="note">score {{ p.recommendation_score }}</td>
                     <td class="note">{{ p.recommendation_note }}</td>
                 </tr>
                 {% endfor %}
