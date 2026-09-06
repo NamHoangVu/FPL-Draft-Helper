@@ -670,19 +670,27 @@ def build_league_overview(league_details: dict, league_element_status: dict, boo
     return overview
 
 
-def build_league_squads(league_details: dict, owned_by_entry: dict) -> list[dict]:
+def build_league_squads(league_details: dict, owned_by_entry: dict, picks_by_entry: dict) -> list[dict]:
     """
-    Like build_league_overview, but returns the recommended starting lineup (PlayerAnalysis
-    objects from analyze_all_owned_players) for each manager, so their team can be shown
-    as a formation the same way as your own.
+    Like build_league_overview, but returns each manager's actual starting lineup
+    for the (locked) gameweek picks_by_entry was fetched for - not our own
+    recommendation - so their team can be shown as a real formation.
+
+    picks_by_entry: dict of entry_id -> get_my_picks() result for that gameweek.
     """
     entries_by_id = {e["id"]: e for e in league_details.get("league_entries", [])}
 
     overview = []
     for standing in sorted(league_details.get("standings", []), key=lambda s: s["rank"]):
         entry = entries_by_id.get(standing["league_entry"], {})
-        entry_players = owned_by_entry.get(entry.get("entry_id"), [])
-        starters, _ = recommend_starting_xi(entry_players) if entry_players else ([], [])
+        entry_id = entry.get("entry_id")
+        players_by_id = {p.id: p for p in owned_by_entry.get(entry_id, [])}
+        picks = picks_by_entry.get(entry_id, {}).get("picks", [])
+        starters = [
+            players_by_id[pick["element"]]
+            for pick in picks
+            if pick["position"] <= 11 and pick["element"] in players_by_id
+        ]
         overview.append({
             "rank": standing["rank"],
             "team_name": entry.get("entry_name", "?"),

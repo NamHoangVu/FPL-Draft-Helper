@@ -182,7 +182,20 @@ def index():
                 apply_club_change_notes(entry_players, current_gw)
             trade_opportunities = find_trade_opportunities(owned_by_entry, entry_id, league_details)
             waiver_timing = build_waiver_timing_report(league_details, owned_by_entry, free_agents, entry_id)
-            league_squads = build_league_squads(league_details, owned_by_entry)
+
+            # current_gw is already locked, so get_my_picks has each manager's
+            # actual starting lineup - not just our own recommendation for them.
+            other_entry_ids = [e["entry_id"] for e in league_details.get("league_entries", []) if e.get("entry_id")]
+
+            def fetch_picks(eid):
+                try:
+                    return eid, client.get_my_picks(eid, current_gw)
+                except Exception:
+                    return eid, {"picks": []}
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                picks_by_entry = dict(executor.map(fetch_picks, other_entry_ids))
+            league_squads = build_league_squads(league_details, owned_by_entry, picks_by_entry)
 
         context = {
             "team_name": team_name,
