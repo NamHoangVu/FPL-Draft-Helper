@@ -114,15 +114,18 @@ def print_squad_table(starters, bench):
     bench_table.add_column("Player", min_width=22)
     bench_table.add_column("Team", width=6)
     bench_table.add_column("Next match", min_width=18)
+    bench_table.add_column("Score", justify="right", width=7)
     bench_table.add_column("Note", min_width=28)
 
     for p in bench:
         fdr_color = ["", "green", "green", "yellow", "red", "red"][p.next_fixture_fdr]
+        score_color = "green" if p.recommendation_score >= 20 else ("yellow" if p.recommendation_score >= 12 else "red")
         bench_table.add_row(
             p.position,
             p.name,
             p.team,
             f"[{fdr_color}]{p.fixture_label}[/]",
+            f"[{score_color}]{p.recommendation_score}[/]",
             p.recommendation_note,
         )
     console.print(bench_table)

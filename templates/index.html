@@ -306,13 +306,16 @@
 
             <h2>🪑 Bench</h2>
             <table>
-                <tr><th>Pos</th><th>Player</th><th>Team</th><th>Next match</th><th>Note</th></tr>
+                <tr><th>Pos</th><th>Player</th><th>Team</th><th>Next match</th><th>Score</th><th>Note</th></tr>
                 {% for p in bench %}
                 <tr>
                     <td><span class="pos-badge">{{ p.position }}</span></td>
                     <td>{{ p.name }}</td>
                     <td>{{ p.team }}</td>
                     <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>
+                    <td class="{{ 'score-high' if p.recommendation_score >= 20 else ('score-mid' if p.recommendation_score >= 12 else 'score-low') }}">
+                        {{ p.recommendation_score }}
+                    </td>
                     <td class="note">{{ p.recommendation_note }}</td>
                 </tr>
                 {% endfor %}
