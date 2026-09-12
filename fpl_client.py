@@ -5,6 +5,7 @@ Fetches data from draft.premierleague.com
 
 import requests
 import json
+import time
 from typing import Optional
 
 BASE_URL = "https://draft.premierleague.com/api"
@@ -61,9 +62,19 @@ class FPLDraftClient:
         # Uses self.session (not a bare requests.get) so this carries the same
         # browser-like headers as the rest of the client - without them, Cloudflare
         # is more likely to reject the request as a bot (seen from cloud IPs like Vercel's).
-        r = self.session.get(f"{CLASSIC_BASE_URL}/fixtures/", params={"event": gameweek})
-        r.raise_for_status()
-        return r.json()
+        # Even with those headers, Cloudflare can still intermittently 403 a request
+        # from a cloud IP, so retry a couple of times before giving up.
+        last_error = None
+        for attempt in range(3):
+            try:
+                r = self.session.get(f"{CLASSIC_BASE_URL}/fixtures/", params={"event": gameweek})
+                r.raise_for_status()
+                return r.json()
+            except requests.HTTPError as e:
+                last_error = e
+                if attempt < 2:
+                    time.sleep(1 + attempt)
+        raise last_error
 
     # ── User and team ────────────────────────────────────────────────────────
 
