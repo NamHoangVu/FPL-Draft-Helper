@@ -305,10 +305,21 @@
             {{ formation(starters) }}
 
             <h2>🪑 Bench</h2>
+            <p class="subtitle">Order matters: if a starter doesn't play, the top eligible bench player comes on first.</p>
             <table>
-                <tr><th>Pos</th><th>Player</th><th>Next match</th><th>Note</th></tr>
+                <tr><th>Sub order</th><th>Pos</th><th>Player</th><th>Next match</th><th>Note</th></tr>
+                {% set ns = namespace(count=0) %}
                 {% for p in bench %}
                 <tr>
+                    <td class="note">
+                        {%- if p.status == 'u' -%}
+                            —
+                        {%- elif p.position == 'GKP' -%}
+                            Reserve GK
+                        {%- else -%}
+                            {% set ns.count = ns.count + 1 %}{{ ns.count }}
+                        {%- endif -%}
+                    </td>
                     <td><span class="pos-badge">{{ p.position }}</span></td>
                     <td>{{ p.name }} ({{ p.team }}) <span class="note">score {{ p.recommendation_score }}</span></td>
                     <td class="{{ fdr_class[p.next_fixture_fdr] }}">{{ p.fixture_label }}</td>

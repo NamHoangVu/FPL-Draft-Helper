@@ -109,15 +109,28 @@ def print_squad_table(starters, bench):
     console.print(table)
 
     # Bench
-    bench_table = Table(title="🪑 Bench", box=box.SIMPLE, header_style="bold dim")
+    # Order matters: if a starter doesn't play, the top eligible bench player
+    # comes on first - recommend_starting_xi() already returns bench in that
+    # priority order (reserve GK(s), then outfield by score, unavailable last).
+    bench_table = Table(title="🪑 Bench (in substitution order)", box=box.SIMPLE, header_style="bold dim")
+    bench_table.add_column("Sub order", width=10)
     bench_table.add_column("Pos", width=5)
     bench_table.add_column("Player", min_width=28)
     bench_table.add_column("Next match", min_width=18)
     bench_table.add_column("Note", min_width=28)
 
+    outfield_count = 0
     for p in bench:
         fdr_color = ["", "green", "green", "yellow", "red", "red"][p.next_fixture_fdr]
+        if p.status == "u":
+            sub_order = "—"
+        elif p.position == "GKP":
+            sub_order = "Reserve GK"
+        else:
+            outfield_count += 1
+            sub_order = str(outfield_count)
         bench_table.add_row(
+            sub_order,
             p.position,
             f"{p.name} ({p.team}) – score {p.recommendation_score}",
             f"[{fdr_color}]{p.fixture_label}[/]",
