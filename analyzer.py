@@ -264,6 +264,14 @@ def calculate_recommendation_score(player: PlayerAnalysis) -> float:
     # Points in the last GW (momentum)
     score += min(player.points_last_gw, 20) * 0.3
 
+    # Surge bonus: extra credit when last GW's points clearly beat the player's
+    # own rolling form - catches a player heating up faster than the multi-GW
+    # average reflects, without also inflating players already in good form
+    # who just had another solid (but not surprising) week.
+    surge = player.points_last_gw - player.form
+    if surge > 0:
+        score += min(surge, 10.0) * 0.7
+
     # Penalty for injury/doubt
     if player.status == "u":
         score -= 20.0
