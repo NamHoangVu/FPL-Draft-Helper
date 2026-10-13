@@ -53,9 +53,24 @@ class PlayerAnalysis:
     next_is_home: bool
 
     # Status
-    status: str            # 'a' = available, 'd' = doubt, 'u' = unavailable
+    status: str            # 'a' = available, 'd' = doubt, 'i' = injured, 's' = suspended, 'u' = unavailable
     chance_of_playing: Optional[int]  # 0-100
     news: str = ""         # FPL's news text, e.g. injury or club transfer
+
+    @property
+    def is_unavailable(self) -> bool:
+        """
+        True if the player can't realistically be expected to play this gameweek.
+        'u' (left the league) is always unavailable. 'i'/'s' (injured/suspended)
+        are unavailable unless FPL has given them a nonzero chance_of_playing -
+        a status code alone ('i') doesn't mean they're definitely out, e.g. a
+        suspension that's about to expire can carry a 75% chance.
+        """
+        if self.status == "u":
+            return True
+        if self.status in ("i", "s"):
+            return not self.chance_of_playing
+        return False
 
     # Score calculated by the analyzer
     recommendation_score: float = 0.0
@@ -72,12 +87,12 @@ class PlayerAnalysis:
 
     @property
     def status_emoji(self) -> str:
-        if self.status == "a":
-            return "✅"
-        elif self.status == "d":
+        if self.is_unavailable:
+            return "❌"
+        elif self.status in ("d", "i", "s"):
             pct = self.chance_of_playing or 50
             return f"⚠️ {pct}%"
-        return "❌"
+        return "✅"
 
 
 def build_current_squad_picks(league_element_status: dict, entry_id: int) -> dict:
@@ -272,10 +287,10 @@ def calculate_recommendation_score(player: PlayerAnalysis) -> float:
     if surge > 0:
         score += min(surge, 10.0) * 0.7
 
-    # Penalty for injury/doubt
-    if player.status == "u":
+    # Penalty for injury/suspension/doubt
+    if player.is_unavailable:
         score -= 20.0
-    elif player.status == "d":
+    elif player.status in ("d", "i", "s"):
         pct = player.chance_of_playing or 50
         score -= (100 - pct) * 0.1
 
@@ -285,14 +300,18 @@ def calculate_recommendation_score(player: PlayerAnalysis) -> float:
 def generate_recommendation_note(player: PlayerAnalysis) -> str:
     notes = []
 
-    if player.status == "u":
+    if player.is_unavailable:
         new_club = extract_new_club(player.news)
         if new_club:
             notes.append(f"❌ No longer in the Premier League (moved to {new_club})")
+        elif player.status == "i":
+            notes.append(f"❌ Injured{' - ' + player.news if player.news else ''}")
+        elif player.status == "s":
+            notes.append(f"❌ Suspended{' - ' + player.news if player.news else ''}")
         else:
             notes.append("❌ Not available")
         return " | ".join(notes)
-    if player.status == "d":
+    if player.status in ("d", "i", "s"):
         notes.append(f"⚠️ Doubtful ({player.chance_of_playing}%)")
 
     if player.next_fixture_fdr <= 2:
@@ -413,9 +432,9 @@ def recommend_starting_xi(players: list[PlayerAnalysis]) -> tuple[list, list]:
 
     Returns (starters, bench) sorted by score.
     """
-    # Separate out injured/unavailable
-    available = [p for p in players if p.status != "u"]
-    unavailable = [p for p in players if p.status == "u"]
+    # Separate out injured/suspended/unavailable
+    available = [p for p in players if not p.is_unavailable]
+    unavailable = [p for p in players if p.is_unavailable]
 
     # Sort by score
     by_pos: dict[str, list] = {"GKP": [], "DEF": [], "MID": [], "FWD": []}
@@ -475,7 +494,15 @@ def analyze_free_agents(
 
         pid = status["element"]
         p = player_lookup.get(pid)
-        if not p or p.get("status") == "u":
+        if not p:
+            continue
+        # Skip players who can't realistically play: left the league ('u'), or
+        # injured/suspended ('i'/'s') with no listed chance of playing - same
+        # rule as PlayerAnalysis.is_unavailable, applied here since we haven't
+        # built that object yet.
+        raw_status = p.get("status", "a")
+        chance = p.get("chance_of_playing_this_round")
+        if raw_status == "u" or (raw_status in ("i", "s") and not chance):
             continue
 
         team_id = p["team"]
@@ -507,8 +534,8 @@ def analyze_free_agents(
             next_opponent=opp_name,
             next_fixture_fdr=fdr,
             next_is_home=is_home,
-            status=p.get("status", "a"),
-            chance_of_playing=p.get("chance_of_playing_this_round"),
+            status=raw_status,
+            chance_of_playing=chance,
             news=p.get("news", ""),
         )
         analysis.recommendation_score = calculate_recommendation_score(analysis)

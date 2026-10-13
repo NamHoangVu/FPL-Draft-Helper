@@ -312,7 +312,7 @@
                 {% for p in bench %}
                 <tr>
                     <td class="note">
-                        {%- if p.status == 'u' -%}
+                        {%- if p.is_unavailable -%}
                             —
                         {%- elif p.position == 'GKP' -%}
                             Reserve GK

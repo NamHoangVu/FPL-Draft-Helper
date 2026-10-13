@@ -122,7 +122,7 @@ def print_squad_table(starters, bench):
     outfield_count = 0
     for p in bench:
         fdr_color = ["", "green", "green", "yellow", "red", "red"][p.next_fixture_fdr]
-        if p.status == "u":
+        if p.is_unavailable:
             sub_order = "—"
         elif p.position == "GKP":
             sub_order = "Reserve GK"
